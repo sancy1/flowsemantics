@@ -1,5 +1,6 @@
 # FlowSemantics (C#)
 
+<!-- docs deploy trigger -->
 API reference for the FlowSemantics C# implementation (.NET).
 
 - **[API reference](api/)** — all types, members, and signatures
