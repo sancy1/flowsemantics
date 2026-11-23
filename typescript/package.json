@@ -19,6 +19,15 @@
   "engines": {
     "node": ">=22.18"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sancy1/flowsemantics.git",
+    "directory": "typescript"
+  },
+  "homepage": "https://sancy1.github.io/flowsemantics/",
+  "bugs": {
+    "url": "https://github.com/sancy1/flowsemantics/issues"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",
