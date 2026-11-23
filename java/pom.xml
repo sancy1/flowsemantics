@@ -85,10 +85,31 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>3.2.7</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <gpgArguments>
+            <arg>--pinentry-mode</arg>
+            <arg>loopback</arg>
+          </gpgArguments>
+        </configuration>
+      </plugin>
       <!-- Maven Central Portal publishing (central.sonatype.com).
            Namespace io.github.sancy1 is verified via the linked GitHub
            account — no DNS TXT record needed.
-           GPG signing is NOT required by Central Portal; checksums suffice.
+           Central Portal requires .asc PGP signatures for every file;
+           maven-gpg-plugin signs during the verify phase.
            Credentials come from GitHub secrets via settings.xml in CI. -->
       <plugin>
         <groupId>org.sonatype.central</groupId>
