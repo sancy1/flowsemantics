@@ -17,18 +17,18 @@ def _true(_input: Any) -> bool:
     return True
 
 
-def _const(value: Any):
+def _const(value: Any) -> Any:
     return lambda _input: value
 
 
-def _raise(exc: Exception):
+def _raise(exc: Exception) -> Any:
     def _fn(_input: Any) -> Any:
         raise exc
 
     return _fn
 
 
-def _raise_handler(exc: Exception):
+def _raise_handler(exc: Exception) -> Any:
     def _fn(_input: Any, _exc: BaseException) -> Any:
         raise exc
 

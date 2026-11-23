@@ -23,7 +23,7 @@ from flowsemantics import (
 
 
 def _total_above_100(order: Any) -> bool:
-    return order["total"] > 100
+    return bool(order["total"] > 100)
 
 
 def _approve(order: Any) -> str:
@@ -39,7 +39,7 @@ def _needs_review(order: Any) -> str:
 
 
 def _double_tax(_input: Any, previous: Any) -> float:
-    return previous * 1.2
+    return float(previous * 1.2)
 
 
 def test_order_approval_scenario() -> None:

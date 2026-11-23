@@ -11,10 +11,10 @@ from flowsemantics.errors import StructureError
 from flowsemantics.execution.outcome import DecisionStatus, ExecutionStatus
 
 
-def test_cancel_check_produces_cancelled():
+def test_cancel_check_produces_cancelled() -> None:
     cancelled = False
 
-    def check():
+    def check() -> bool:
         return cancelled
 
     contract = (
@@ -27,10 +27,10 @@ def test_cancel_check_produces_cancelled():
     assert outcome.interruption.kind == "cancelled"
 
 
-def test_cancel_check_bypasses_catch():
+def test_cancel_check_bypasses_catch() -> None:
     cancelled = False
 
-    def check():
+    def check() -> bool:
         return cancelled
 
     contract = (
@@ -46,7 +46,7 @@ def test_cancel_check_bypasses_catch():
     assert outcome.recovery is None
 
 
-def test_simulate_batch_distribution():
+def test_simulate_batch_distribution() -> None:
     contract = (
         Flow()
         .when(lambda i: i.get("ok"), then=lambda i: "yes", id="r1")
@@ -60,7 +60,7 @@ def test_simulate_batch_distribution():
     assert len(report["outcomes"]) == 3
 
 
-def test_portability_report_native_and_portable():
+def test_portability_report_native_and_portable() -> None:
     native = Flow().when(lambda i: True, then=lambda i: "v", id="r1").compile()
     rep = native.portability_report()
     assert rep["classification"] == "NATIVE"
@@ -72,7 +72,7 @@ def test_portability_report_native_and_portable():
     assert rep2["offenders"] == []
 
 
-def test_validate_effective_window_error():
+def test_validate_effective_window_error() -> None:
     frm = datetime.datetime(2025, 1, 1)
     to = datetime.datetime(2024, 1, 1)
     with pytest.raises(StructureError):
@@ -89,13 +89,13 @@ def test_validate_effective_window_error():
         )
 
 
-def test_validate_gap_warning():
+def test_validate_gap_warning() -> None:
     contract = Flow().when(lambda i: True, then=lambda i: "v", id="r1").compile()
     codes = {i.code for i in contract.validate()}
     assert "possible_gap" in codes
 
 
-def test_validate_unreachable_and_overlap_portable():
+def test_validate_unreachable_and_overlap_portable() -> None:
     contract = (
         Flow()
         .when_expr(pconst(True), then=pconst("a"), id="p1")
@@ -108,7 +108,7 @@ def test_validate_unreachable_and_overlap_portable():
     assert "overlapping_rules" in codes
 
 
-def test_merge_splices_rules():
+def test_merge_splices_rules() -> None:
     inner = (
         Flow()
         .when(lambda i: False, then=lambda i: "inner", id="inner1")
@@ -127,21 +127,21 @@ def test_merge_splices_rules():
     assert no_match.try_execute(None).value == "inner-fb"
 
 
-def test_merge_rejects_mode_mismatch():
+def test_merge_rejects_mode_mismatch() -> None:
     a = Flow()
     b = Flow().with_mode(EvaluationMode.ALL_MATCH)
     with pytest.raises(StructureError):
         a.merge(b)
 
 
-def test_merge_rejects_duplicate_rule_ids():
+def test_merge_rejects_duplicate_rule_ids() -> None:
     a = Flow().when(lambda i: True, then=lambda i: 1, id="dup")
     b = Flow().when(lambda i: True, then=lambda i: 2, id="dup")
     with pytest.raises(StructureError):
         a.merge(b)
 
 
-def test_effective_dates_gate_firing():
+def test_effective_dates_gate_firing() -> None:
     f = datetime.datetime(2024, 1, 1)
     u = datetime.datetime(2026, 1, 1)
     contract = (

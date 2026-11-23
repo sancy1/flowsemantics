@@ -24,11 +24,11 @@ def _false(_input: Any) -> bool:
     return False
 
 
-def _const(value: Any):
+def _const(value: Any) -> Any:
     return lambda _input: value
 
 
-def _raise(exc: Exception):
+def _raise(exc: Exception) -> Any:
     def _fn(_input: Any) -> Any:
         raise exc
 

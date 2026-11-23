@@ -24,7 +24,7 @@ def _true(_input: Any) -> bool:
     return True
 
 
-def _const(value: Any):
+def _const(value: Any) -> Any:
     return lambda _input: value
 
 

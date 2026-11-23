@@ -17,7 +17,7 @@ Notes:
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -25,8 +25,8 @@ from flowsemantics.execution.outcome import Effect
 
 RuleKind = Literal["when", "when_not", "then"]
 
-ConditionFn = Callable[[Any], bool]
-GuardFn = Callable[[Any], bool]
+ConditionFn = Callable[[Any], bool | Awaitable[bool]]
+GuardFn = Callable[[Any], bool | Awaitable[bool]]
 ActionFn = Callable[..., Any]
 
 

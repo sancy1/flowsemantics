@@ -211,8 +211,12 @@ def test_outcome_status_always_valid() -> None:
         flow = Flow()
         n = rng.randrange(1, 4)
         for i in range(n):
+
+            def pred(inp: Any, i: int = i) -> bool:
+                return bool(inp % 2 == i)
+
             flow.when(
-                lambda inp, i=i: inp % 2 == i,
+                pred,
                 then=lambda inp, i=i: i * 10,
                 id=f"r{i}",
             )

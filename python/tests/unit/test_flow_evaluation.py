@@ -15,7 +15,7 @@ from flowsemantics import (
 )
 
 
-def _const(value: Any):
+def _const(value: Any) -> Any:
     return lambda _input: value
 
 

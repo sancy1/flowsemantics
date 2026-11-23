@@ -116,7 +116,7 @@ class Flow:
         self._mode: EvaluationMode = EvaluationMode.FIRST_MATCH
         self._clock: Clock | None = None
         self._catches: list[CatchRule] = []
-        self._hooks: list[Callable[[Any, str, Any], None]] = []
+        self._hooks: list[Callable[[Any, str, Any], Any]] = []
         self._finalizers: list[Callable[[FinallyContext], None]] = []
         self._finally_policy: FinallyFailurePolicy = FinallyFailurePolicy.PRESERVE_PRIMARY
         self._finally_timeout_ms: int | None = None
@@ -389,7 +389,7 @@ class Flow:
         self._catches.append(CatchRule(kind="rethrow"))
         return self
 
-    def on_match(self, hook: Callable[[Any, str, Any], None]) -> Flow:
+    def on_match(self, hook: Callable[[Any, str, Any], Any]) -> Flow:
         """Register an observable hook (SPEC 11.5).
 
         The hook receives (input, RuleId, value) after a when/when_not
@@ -735,7 +735,7 @@ class FlowContract:
     spec_version: str
     portability: FlowPortability
     catches: tuple[CatchRule, ...] = ()
-    hooks: tuple[Callable[[Any, str, Any], None], ...] = ()
+    hooks: tuple[Callable[[Any, str, Any], Any], ...] = ()
     finalizers: tuple[Callable[[FinallyContext], Any], ...] = ()
     finally_policy: FinallyFailurePolicy = FinallyFailurePolicy.PRESERVE_PRIMARY
     finally_timeout_ms: int | None = None

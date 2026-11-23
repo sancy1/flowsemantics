@@ -124,7 +124,7 @@ def test_async_parity_same_outcome() -> None:
     )
 
     async def acond(o: Any) -> bool:
-        return o["x"] > 0
+        return bool(o["x"] > 0)
 
     async def apos(_o: Any) -> Any:
         return "pos"
@@ -146,7 +146,7 @@ def test_async_catch_handler() -> None:
     async def boom(_i: Any) -> Any:
         raise ValueError("async-boom")
 
-    async def handler(_i: Any, _e: Exception) -> Any:
+    async def handler(_i: Any, _e: BaseException) -> Any:
         return "recovered"
 
     contract = Flow().when(lambda i: True, then=boom, id="r1").catch(ValueError, handler).compile()

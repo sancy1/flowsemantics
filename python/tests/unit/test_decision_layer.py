@@ -16,6 +16,8 @@ Notes:
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from flowsemantics import (
@@ -27,7 +29,7 @@ from flowsemantics import (
 )
 
 
-def _const(value: object):
+def _const(value: object) -> Any:
     return lambda _input: value
 
 
