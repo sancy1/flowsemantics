@@ -1,0 +1,54 @@
+# filepath: .github/workflows/publish-nuget.yml
+# layer: Tooling
+# module: n/a (repository root)
+# since: 0.1.0
+# purpose: Publish the C# NuGet package to nuget.org via trusted publishing (OIDC)
+# NOTES:
+#   - Triggered by version tags (v*). No long-lived API key is stored:
+#     NuGet/login exchanges the GitHub OIDC token for a 1-hour API key.
+#   - The trusted publishing policy on nuget.org must match:
+#       Repository Owner: sancy1
+#       Repository:       flowsemantics
+#       Workflow File:    publish-nuget.yml
+#       Environment:      (empty)
+
+name: Publish NuGet
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: pack + push FlowSemantics to nuget.org
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required for OIDC token issuance
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Pack
+        working-directory: csharp
+        run: dotnet pack FlowSemantics/FlowSemantics.csproj -c Release -o dist
+
+      - name: NuGet login (OIDC -> temp API key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: sancy # nuget.org profile name, NOT email
+
+      - name: Push to nuget.org
+        run: >
+          dotnet nuget push csharp/dist/*.nupkg
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
