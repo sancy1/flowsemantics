@@ -7,7 +7,9 @@ dependencies** (Node.js standard library only).
 
 Repository: [github.com/sancy1/flowsemantics](https://github.com/sancy1/flowsemantics)
 
-**Documentation:** [sancy1.github.io/flowsemantics](https://sancy1.github.io/flowsemantics/) — guides, feature catalog, and API reference
+**API documentation (TypeDoc):** https://sancy1.github.io/flowsemantics/typescript/
+
+**Documentation:** [sancy1.github.io/flowsemantics](https://sancy1.github.io/flowsemantics/) — guides, feature catalog, and API reference for all five languages
 
 ## Package identity
 
