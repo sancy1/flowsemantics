@@ -14,7 +14,7 @@ Repository: [github.com/sancy1/flowsemantics](https://github.com/sancy1/flowsema
 | NuGet package | `FlowSemantics` |
 | Namespace | `FlowSemantics` |
 | Target framework | `net10.0` |
-| Version | `0.1.0` |
+| Version | `0.1.1` |
 
 ## Projects
 
@@ -34,7 +34,7 @@ dotnet add package FlowSemantics
 Or in your `.csproj`:
 
 ```xml
-<PackageReference Include="FlowSemantics" Version="0.1.0" />
+<PackageReference Include="FlowSemantics" Version="0.1.1" />
 ```
 
 ## Building and packing (from source)
@@ -45,7 +45,7 @@ dotnet build FlowSemantics.Runner/FlowSemantics.Runner.csproj -c Release
 dotnet pack FlowSemantics/FlowSemantics.csproj -c Release -o dist
 ```
 
-Produces `dist/FlowSemantics.0.1.0.nupkg`.
+Produces `dist/FlowSemantics.0.1.1.nupkg`.
 
 ## Feature documentation
 
