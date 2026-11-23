@@ -1,0 +1,61 @@
+# filepath: .gitignore
+# layer: Tooling
+# module: n/a (root)
+# since: 0.0.0
+# purpose: Exclude build artifacts, caches, virtualenvs and OS noise from version control
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+.venv-*/
+venv/
+env/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+.eggs/
+*.whl
+
+# Local artifacts and feeds
+artifacts/
+.local-feed/
+
+# TypeScript
+node_modules/
+
+# Go
+*.exe
+*.test
+
+# Java
+*.class
+java/out/
+java/docs/
+
+# C# / .NET
+bin/
+obj/
+
+# Python Sphinx output
+python/docs/_build/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+

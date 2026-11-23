@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowsemantics.example/spec/vector.schema.json",
+  "title": "FlowSemantics Conformance Vector",
+  "description": "Language-agnostic conformance vector. Phase 0.5 finalized. Vectors reference only the fixture vocabulary (spec/fixtures.md). They never carry host-language lambdas or serialized code.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "spec_version", "spec_section", "pipeline", "input", "expected"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable vector identifier, e.g. 001-core-when-true. Never reused.",
+      "pattern": "^[0-9]{3}-[a-z0-9][a-z0-9-]*$"
+    },
+    "spec_version": {
+      "type": "string",
+      "description": "The specification version this vector targets, e.g. 0.1.0. Runner uses this for version compatibility per runner-protocol.md.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "spec_section": {
+      "type": "string",
+      "description": "The SPEC.md section this vector proves, e.g. 11.8.3.",
+      "pattern": "^[0-9]+(\\.[0-9]+)*$"
+    },
+    "pipeline": {
+      "type": "object",
+      "description": "The rule graph under test, expressed in the fixture vocabulary.",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["rules"] },
+        { "required": ["portable_ir"] }
+      ],
+      "properties": {
+        "portable_ir": {
+          "type": "object",
+          "description": "A canonical Portable IR document (SPEC 14.2, spec/ir.schema.json). When present, the runner rebuilds an executable flow via Flow.from_ir; rules/mode/fallback keys are ignored."
+        },
+        "rules": {
+          "type": "array",
+          "minItems": 0,
+          "items": { "$ref": "#/$defs/Rule" }
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["FirstMatch", "AllMatch", "Priority"],
+          "description": "EvaluationMode. Defaults to FirstMatch if absent."
+        },
+        "execution": {
+          "type": "string",
+          "enum": ["sync", "async"],
+          "description": "Execution path. 'async' runs the contract via try_execute_async (SPEC 11.7); sync fixtures still resolve. Defaults to sync."
+        },
+        "finally": {
+          "type": ["string", "object"],
+          "description": "Named cleanup fixture for the finalizer (string shorthand), or a full FixtureRef when parameters are needed (e.g. cleanup.throws kind). Absent if no finalizer."
+        },
+        "finally_policy": {
+          "type": "string",
+          "enum": ["PreservePrimary", "Attach", "ReplacePrimary"],
+          "description": "FinallyFailurePolicy. Defaults to PreservePrimary if absent."
+        },
+        "finally_timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "WithFinallyTimeout in milliseconds. Absent means use implementation default."
+        },
+        "catches": {
+          "type": "array",
+          "description": "Ordered exception handlers per SPEC.md sections 11.1-11.4.",
+          "items": { "$ref": "#/$defs/Catch" }
+        },
+        "on_match": {
+          "type": "array",
+          "description": "Observable hooks invoked after a rule action (SPEC 11.5).",
+          "items": { "$ref": "#/$defs/FixtureRef" }
+        },
+        "fallback": {
+          "type": "object",
+          "description": "No-match fallback per SPEC.md section 10.4. At most one per pipeline.",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["otherwise", "default_if_no_match"]
+            },
+            "action": {
+              "type": "object",
+              "description": "Required when kind is otherwise: the fallback transformation fixture.",
+              "$ref": "#/$defs/FixtureRef"
+            },
+            "value": {
+              "type": ["string", "number", "boolean", "null"],
+              "description": "Required when kind is default_if_no_match: the constant fallback value."
+            }
+          }
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "description": "Named fixture reference for the input value.",
+      "$ref": "#/$defs/FixtureRef"
+    },
+    "expected": {
+      "type": "object",
+      "required": ["execution_status", "has_finalization"],
+      "additionalProperties": false,
+      "properties": {
+        "execution_status": {
+          "type": "string",
+          "enum": ["COMPLETED", "FAILED", "CANCELLED", "TIMED_OUT"]
+        },
+        "decision_status": {
+          "type": ["string", "null"],
+          "enum": ["APPROVED", "REJECTED", "NO_MATCH", null]
+        },
+        "value": {
+          "type": ["string", "number", "boolean", "null"],
+          "description": "The outcome value. Null if absent."
+        },
+        "has_recovery": {
+          "type": "boolean",
+          "description": "True if RecoveryInfo is populated per Section 3.4."
+        },
+        "has_interruption": {
+          "type": "boolean",
+          "description": "True if InterruptionInfo is populated per Section 3.3."
+        },
+        "interruption_kind": {
+          "type": ["string", "null"],
+          "enum": ["cancelled", "timed_out", null]
+        },
+        "has_finalization": {
+          "type": "boolean",
+          "description": "True if FinalizationInfo is populated per Section 3.5. False when no finalizer was registered."
+        },
+        "is_clean": {
+          "type": ["boolean", "null"],
+          "description": "FinalizationInfo.is_clean. Null when has_finalization is false."
+        },
+        "secondary_exceptions_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Count of exceptions in secondary_exceptions. Counts exceptions only; not cancellation, timeout, or budget exhaustion."
+        },
+        "primary_exception_kind": {
+          "type": ["string", "null"],
+          "enum": ["Kind.Timeout", "Kind.Cancelled", "Kind.ValueError", "Kind.Any", null],
+          "description": "Abstract exception kind for primary_exception when execution_status is FAILED. Null otherwise."
+        },
+        "effects": {
+          "type": "array",
+          "description": "Ordered list of proposed effects per Section 3.7. Order-sensitive per Section 6.4.",
+          "items": { "$ref": "#/$defs/Effect" }
+        }
+      }
+    },
+    "trace": {
+      "type": "array",
+      "description": "Optional expected trace events.",
+      "items": { "$ref": "#/$defs/TraceEvent" }
+    },
+    "trace_subset": {
+      "type": "boolean",
+      "description": "If true, expected trace events must appear in the observed trace in the same relative order; extra observed events are allowed. If false or absent, the full observed trace must match."
+    },
+    "expected_error": {
+      "type": "string",
+      "description": "Optional rejection expectation (SPEC 9.2, 9.4). When present, the vector passes iff building, compiling, or executing the pipeline raises an error whose message contains this substring. The expected block is then ignored. Mutually exclusive with normal outcome comparison."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional human-readable note about what this vector proves."
+    }
+  },
+  "$defs": {
+    "Rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "action"],
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "then" } }, "required": ["kind"] },
+          "then": { "not": { "required": ["condition"] } },
+          "else": { "required": ["condition"] }
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "RuleId. Must be unique within the pipeline.",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["when", "when_not", "then"],
+          "description": "Rule kind per SPEC.md sections 10.2 and 10.5. Defaults to when when absent. then stages receive (input, previous_output) and follow a matched rule."
+        },
+        "condition": {
+          "type": "object",
+          "description": "Condition fixture reference.",
+          "$ref": "#/$defs/FixtureRef"
+        },
+        "guard": {
+          "type": ["object", "null"],
+          "description": "Optional guard fixture reference. Null or absent means no guard.",
+          "$ref": "#/$defs/FixtureRef"
+        },
+        "action": {
+          "type": "object",
+          "description": "Action fixture reference.",
+          "$ref": "#/$defs/FixtureRef"
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Priority for Priority evaluation mode. Higher priority evaluated first. Absent means 0."
+        },
+        "effects": {
+          "type": "array",
+          "description": "Proposed effects attached to this rule (SPEC 3.7, 5, 6.4). Proposed in evaluation order when the rule matches; never applied by the library.",
+          "items": { "$ref": "#/$defs/Effect" }
+        }
+      }
+    },
+    "Catch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["typed", "when", "any", "rethrow"],
+          "description": "Catch kind per SPEC.md sections 11.1-11.4."
+        },
+        "exc_kind": {
+          "type": "string",
+          "enum": ["Kind.Timeout", "Kind.Cancelled", "Kind.ValueError", "Kind.Any"],
+          "description": "Abstract error kind for typed/when catches. Required for typed and when."
+        },
+        "predicate": {
+          "type": "object",
+          "description": "Optional predicate fixture for kind=when. Receives (input, exception).",
+          "$ref": "#/$defs/FixtureRef"
+        },
+        "handler": {
+          "type": "object",
+          "description": "Handler fixture receiving (input, exception). Required for typed/when/any; absent for rethrow.",
+          "$ref": "#/$defs/FixtureRef"
+        },
+        "id": {
+          "type": "string",
+          "description": "Optional stable identifier recorded in RecoveryInfo."
+        }
+      }
+    },
+    "FixtureRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixture"],
+      "properties": {
+        "fixture": {
+          "type": "string",
+          "description": "Fixture name from spec/fixtures.md, e.g. cond.true, action.const."
+        },
+        "params": {
+          "type": "object",
+          "description": "Fixture parameters. Structure depends on the fixture. See spec/fixtures.md."
+        }
+      }
+    },
+    "Effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Stable effect identifier.",
+          "minLength": 1
+        },
+        "payload": {
+          "type": ["string", "number", "boolean", "null", "object", "array"],
+          "description": "Opaque effect payload. Structure defined by the application."
+        }
+      }
+    },
+    "TraceEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "condition_evaluated",
+            "condition_raised",
+            "guard_evaluated",
+            "action_executed",
+            "action_raised",
+            "catch_matched",
+            "catch_predicate_evaluated",
+            "catch_predicate_raised",
+            "catch_handled",
+            "catch_declined",
+            "rethrow_reached",
+            "hook_invoked",
+            "hook_raised",
+            "effect_proposed",
+            "skipped_by_short_circuit",
+            "skipped_by_mode",
+            "finally_started",
+            "finally_completed",
+            "finally_raised",
+            "cancelled_observed",
+            "timed_out_observed",
+            "rule_skipped"
+          ],
+          "description": "Event type from the canonical vocabulary in Section 12.1."
+        },
+        "rule_id": {
+          "type": ["string", "null"],
+          "description": "RuleId the event pertains to, or null for events not tied to a rule."
+        },
+        "reason": {
+          "type": ["string", "null"],
+          "enum": ["condition_false", "guard_blocked", "not_effective", "earlier_match", "mode_excluded", null],
+          "description": "Reason per Section 12.1.1. Required for skip event types; null or absent otherwise."
+        }
+      }
+    }
+  }
+}

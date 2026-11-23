@@ -1,0 +1,51 @@
+{
+  "id": "034-ir-in-not-in",
+  "spec_version": "0.1.0",
+  "spec_section": "14.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "membership",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "vip",
+          "kind": "when",
+          "condition": {
+            "op": "in",
+            "args": [{ "op": "field", "value": "tier" }],
+            "value": ["gold", "platinum"]
+          },
+          "transform": { "op": "const", "value": "vip" }
+        },
+        {
+          "rule_id": "not-blocked",
+          "kind": "when_not",
+          "condition": {
+            "op": "in",
+            "args": [{ "op": "field", "value": "tier" }],
+            "value": ["blocked"]
+          },
+          "transform": { "op": "const", "value": "standard" }
+        }
+      ],
+      "fallback": { "kind": "default_if_no_match", "value": "reject" }
+    }
+  },
+  "input": { "fixture": "input.order_50" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "standard",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "in/not_in membership ops via IR; missing field (None) is not in either list, so vip fails and when_not matches (SPEC 14.2)."
+}

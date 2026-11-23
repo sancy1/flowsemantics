@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+    <PackageId>FlowSemantics</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>FlowSemantics</Authors>
+    <Description>FlowSemantics .NET implementation — conformance target per SPEC 14.5</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Condition="Exists('..\..\README.md')" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Condition="Exists('..\..\LICENSE')" />
+  </ItemGroup>
+
+</Project>

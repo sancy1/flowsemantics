@@ -1,0 +1,36 @@
+{
+  "id": "019-error-catch-handler-throws",
+  "spec_version": "0.1.0",
+  "spec_section": "11.1",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.throws", "params": { "kind": "Kind.ValueError" } }
+      }
+    ],
+    "catches": [
+      {
+        "kind": "typed",
+        "exc_kind": "Kind.ValueError",
+        "handler": { "fixture": "catch.throws", "params": { "kind": "Kind.Any" } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "FAILED",
+    "decision_status": null,
+    "value": null,
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": "Kind.Any",
+    "effects": []
+  },
+  "notes": "A failing catch handler propagates the NEW exception, not the original (SPEC 11.1)."
+}

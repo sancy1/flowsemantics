@@ -1,0 +1,34 @@
+{
+  "id": "005-core-first-match-short-circuit",
+  "spec_version": "0.1.0",
+  "spec_section": "10.6",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": "first" } }
+      },
+      {
+        "id": "r2",
+        "condition": { "fixture": "cond.throws", "params": { "kind": "Kind.ValueError" } },
+        "action": { "fixture": "action.const", "params": { "v": "second" } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "first",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "FirstMatch short-circuits: r2's throwing condition is never evaluated (SPEC 10.6, 4.5)."
+}

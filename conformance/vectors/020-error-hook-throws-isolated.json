@@ -1,0 +1,32 @@
+{
+  "id": "020-error-hook-throws-isolated",
+  "spec_version": "0.1.0",
+  "spec_section": "11.5",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": "ok" } }
+      }
+    ],
+    "on_match": [
+      { "fixture": "hook.throws", "params": { "kind": "Kind.ValueError" } }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "ok",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 1,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "A hook failure is isolated into secondary_exceptions and never alters the outcome or triggers catch (SPEC 11.5)."
+}

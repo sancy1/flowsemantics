@@ -1,0 +1,38 @@
+{
+  "id": "024-trace-effect-proposed",
+  "spec_version": "0.1.0",
+  "spec_section": "12.1",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": "ok" } },
+        "effects": [
+          { "name": "notify", "payload": { "user": "u1" } }
+        ]
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "ok",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": [
+      { "name": "notify", "payload": { "user": "u1" } }
+    ]
+  },
+  "trace": [
+    { "type": "effect_proposed", "rule_id": "r1" }
+  ],
+  "trace_subset": true,
+  "notes": "Proposed effects appear in outcome.effects in order and emit effect_proposed trace events (SPEC 3.7, 6.4, 12.1)."
+}

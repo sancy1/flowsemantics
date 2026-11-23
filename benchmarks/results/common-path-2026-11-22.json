@@ -1,0 +1,22 @@
+{
+  "benchmark": "common_path_first_match",
+  "iterations": 50000,
+  "warmup": 2000,
+  "latency_us": {
+    "p50": 16.300007700920105,
+    "p95": 31.200004741549492,
+    "p99": 46.10000178217888,
+    "mean": 19.54970203805715
+  },
+  "throughput_ops_per_sec": 50169.724178503566,
+  "allocations": {
+    "peak_bytes_during_batch": 688,
+    "note": "tracemalloc peak over the full batch, not per-call"
+  },
+  "environment": {
+    "python": "3.11.9",
+    "platform": "win32"
+  },
+  "recorded": "2026-11-22",
+  "command": "python benchmarks/bench_common_path.py --iterations 50000 --warmup 2000"
+}

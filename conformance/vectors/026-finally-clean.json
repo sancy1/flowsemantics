@@ -1,0 +1,30 @@
+{
+  "id": "026-finally-clean",
+  "spec_version": "0.1.0",
+  "spec_section": "11.8",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": "ok" } }
+      }
+    ],
+    "finally": "cleanup.succeeds"
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "ok",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": true,
+    "is_clean": true,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "A successful finalizer yields FinalizationInfo with is_clean true (SPEC 11.8, 3.5)."
+}

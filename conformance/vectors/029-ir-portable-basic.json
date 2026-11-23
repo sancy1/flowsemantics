@@ -1,0 +1,57 @@
+{
+  "id": "029-ir-portable-basic",
+  "spec_version": "0.1.0",
+  "spec_section": "14.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "order-routing",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "high-value",
+          "kind": "when",
+          "condition": {
+            "op": "gt",
+            "args": [
+              { "op": "field", "value": "total" },
+              { "op": "const", "value": 100 }
+            ]
+          },
+          "transform": { "op": "const", "value": "manual-review" },
+          "effects": [
+            { "name": "flag-review", "payload": { "tier": "high" } }
+          ]
+        },
+        {
+          "rule_id": "standard",
+          "kind": "when",
+          "condition": {
+            "op": "is_not_null",
+            "args": [{ "op": "field", "value": "total" }]
+          },
+          "transform": { "op": "const", "value": "standard" }
+        }
+      ],
+      "fallback": { "kind": "default_if_no_match", "value": "reject" }
+    }
+  },
+  "input": { "fixture": "input.order_large" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "manual-review",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": [
+      { "name": "flag-review", "payload": { "tier": "high" } }
+    ]
+  },
+  "notes": "A Portable IR document executes identically to its native equivalent, including proposed effects (SPEC 14.2)."
+}

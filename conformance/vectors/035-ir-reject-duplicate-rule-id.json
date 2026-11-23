@@ -1,0 +1,34 @@
+{
+  "id": "035-ir-reject-duplicate-rule-id",
+  "spec_version": "0.1.0",
+  "spec_section": "9.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "dup",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "dup",
+          "kind": "when",
+          "condition": { "op": "const", "value": true },
+          "transform": { "op": "const", "value": 1 }
+        },
+        {
+          "rule_id": "dup",
+          "kind": "when",
+          "condition": { "op": "const", "value": true },
+          "transform": { "op": "const", "value": 2 }
+        }
+      ]
+    }
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "has_finalization": false
+  },
+  "expected_error": "duplicate",
+  "notes": "SPEC 9.2: duplicate RuleId in portable IR is rejected at deserialization."
+}

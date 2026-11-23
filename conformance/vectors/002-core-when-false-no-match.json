@@ -1,0 +1,29 @@
+{
+  "id": "002-core-when-false-no-match",
+  "spec_version": "0.1.0",
+  "spec_section": "10.2",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.false" },
+        "action": { "fixture": "action.const", "params": { "v": 1 } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "NO_MATCH",
+    "value": null,
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "Condition false, no fallback: NO_MATCH with no value (SPEC 3.2 case a, 10.4)."
+}

@@ -1,0 +1,97 @@
+# filepath: .github/workflows/ci-langs.yml
+# layer: Tooling
+# module: n/a (repository root)
+# since: 0.0.0
+# purpose: CI for the four non-Python implementations — unit tests + conformance vectors
+# NOTES:
+#   - Each job runs the language's unit tests, then the shared conformance
+#     suite (conformance/vectors, 39 vectors) through that language's runner.
+#   - Zero third-party runtime dependencies in every implementation.
+
+name: CI (languages)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  typescript:
+    name: typescript (unit + conformance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dev dependencies
+        working-directory: typescript
+        run: npm ci
+      - name: Typecheck (strict)
+        working-directory: typescript
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Unit tests
+        working-directory: typescript
+        run: node --test tests/engine.test.ts
+      - name: Conformance vectors
+        working-directory: typescript
+        run: node src/runner.ts --vectors ../conformance/vectors
+
+  go:
+    name: go (unit + conformance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - name: Vet
+        working-directory: go
+        run: go vet ./...
+      - name: Unit tests
+        working-directory: go
+        run: go test ./...
+      - name: Conformance vectors
+        working-directory: go
+        run: go run ./cmd/runner --vectors ../conformance/vectors
+
+  java:
+    name: java (unit + conformance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Compile
+        working-directory: java
+        run: javac -d out src/flowsemantics/*.java src/flowsemantics/runner/*.java
+      - name: Unit tests
+        working-directory: java
+        run: java -cp out flowsemantics.FlowTest
+      - name: Conformance vectors
+        working-directory: java
+        run: java -cp out flowsemantics.runner.Runner --vectors ../conformance/vectors
+
+  csharp:
+    name: csharp (unit + conformance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build
+        working-directory: csharp
+        run: dotnet build FlowSemantics.Runner/FlowSemantics.Runner.csproj -v q
+      - name: Unit tests (selftest)
+        working-directory: csharp
+        run: dotnet run --project FlowSemantics.Runner --no-build -- --selftest
+      - name: Conformance vectors
+        working-directory: csharp
+        run: dotnet run --project FlowSemantics.Runner --no-build -- --vectors ../conformance/vectors

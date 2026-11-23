@@ -1,0 +1,33 @@
+{
+  "id": "007-core-default-if-no-match",
+  "spec_version": "0.1.0",
+  "spec_section": "10.4",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.false" },
+        "action": { "fixture": "action.const", "params": { "v": "rule" } }
+      }
+    ],
+    "fallback": {
+      "kind": "default_if_no_match",
+      "value": 99
+    }
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "NO_MATCH",
+    "value": 99,
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "default_if_no_match produces a constant value under NO_MATCH (SPEC 10.4)."
+}

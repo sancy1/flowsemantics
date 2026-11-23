@@ -1,0 +1,39 @@
+# filepath: .github/workflows/audit.yml
+# layer: Tooling
+# module: n/a (repository root)
+# since: 0.0.0
+# purpose: Run audit.py (zero runtime deps + banned APIs) on every PR and nightly
+# NOTES:
+#   - FAILS CLOSED if audit.py is missing. That is intentional.
+#   - audit.py is created in Phase 0.0 Script A4.1.
+
+name: Audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: audit (zero third-party runtime deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run audit.py (fail closed if missing)
+        run: |
+          if [ ! -f audit.py ]; then
+            echo "FAIL: audit.py missing. This is intentional: the audit must run."
+            exit 1
+          fi
+          python audit.py
+

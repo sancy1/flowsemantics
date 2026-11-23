@@ -1,0 +1,37 @@
+{
+  "id": "015-error-catch-typed-recovers",
+  "spec_version": "0.1.0",
+  "spec_section": "11.1",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.throws", "params": { "kind": "Kind.ValueError" } }
+      }
+    ],
+    "catches": [
+      {
+        "kind": "typed",
+        "exc_kind": "Kind.ValueError",
+        "handler": { "fixture": "catch.handles", "params": { "v": "recovered" } },
+        "id": "c1"
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": null,
+    "value": "recovered",
+    "has_recovery": true,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "A typed catch recovers the exception and produces a COMPLETED outcome with RecoveryInfo (SPEC 11.1, 3.4)."
+}

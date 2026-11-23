@@ -1,0 +1,23 @@
+# filepath: python/samples/scratch_consumer/pyproject.toml
+# layer: Tests
+# module: scratch_consumer
+# since: 0.0.0
+# purpose: Sample consumer that installs flow-semantics from a wheel
+# NOTES:
+#   - This sample must NOT reference ../../src/ by path.
+#   - It installs flow-semantics from the built wheel; see README.md.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scratch-consumer"
+version = "0.0.0"
+description = "Sample consumer of flow-semantics (installed from wheel)"
+requires-python = ">=3.11"
+dependencies = ["flow-semantics"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+

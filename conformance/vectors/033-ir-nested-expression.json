@@ -1,0 +1,52 @@
+{
+  "id": "033-ir-nested-expression",
+  "spec_version": "0.1.0",
+  "spec_section": "14.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "nested-expr",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "deep",
+          "kind": "when",
+          "condition": {
+            "op": "not",
+            "args": [
+              {
+                "op": "not",
+                "args": [
+                  {
+                    "op": "not",
+                    "args": [
+                      { "op": "const", "value": false }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "transform": { "op": "const", "value": "deep-ok" }
+        }
+      ],
+      "fallback": { "kind": "default_if_no_match", "value": "fallback" }
+    }
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "deep-ok",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "Nested boolean expressions evaluate correctly through the IR path (SPEC 14.2); not(not(not(false))) = true."
+}

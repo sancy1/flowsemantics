@@ -1,0 +1,172 @@
+"""FlowSemantics: zero-runtime-dependency, language-neutral execution-semantics library.
+
+This package is the Python reference implementation of the FlowSemantics
+specification (SPEC.md v0.1, frozen). The specification is authoritative;
+this package is a conforming implementation, not the definition.
+
+Layer:      Contracts
+Module:     flowsemantics
+Since:      0.0.0
+Implements: n/a (public package surface)
+Depends on: flowsemantics._version (re-exported as __version__)
+Used by:    consumers, tests, samples, conformance runner
+See also:   SPEC.md, docs/getting-started.md (Phase 1)
+
+Notes:
+  - __all__ grows as features are implemented in Phases 1-3.
+  - _version is re-exported for the smoke test and for pip-show consistency.
+"""
+
+from __future__ import annotations
+
+from flowsemantics._version import __version__
+from flowsemantics.configuration import (
+    OPS,
+    CatchRule,
+    DecisionTable,
+    DecisionTableRow,
+    EvaluationMode,
+    Fallback,
+    FinallyCancellationToken,
+    FinallyContext,
+    FinallyFailurePolicy,
+    Flow,
+    FlowContract,
+    FlowPortability,
+    PExpr,
+    PortableFlow,
+    PortableRule,
+    Rule,
+    RuleId,
+    ValidationIssue,
+    eval_expr,
+    expr_from_dict,
+    expr_to_dict,
+    pand,
+    pconst,
+    peq,
+    pfield,
+    pge,
+    pgt,
+    pin,
+    pis_not_null,
+    pis_null,
+    ple,
+    plt,
+    pne,
+    pnot,
+    pnot_in,
+    por,
+    table_to_flow,
+)
+from flowsemantics.errors import (
+    AsyncOnlyContractError,
+    EvaluationError,
+    FinalizationBudgetExceeded,
+    FlowSemanticsError,
+    PortabilityError,
+    StructureError,
+)
+from flowsemantics.execution import (
+    EVENT_TYPES,
+    REASONS,
+    Clock,
+    DecisionStatus,
+    Effect,
+    ExecutionStatus,
+    ExecutionTrace,
+    FakeClock,
+    FinalizationInfo,
+    FlowContext,
+    FlowOutcome,
+    InterruptionInfo,
+    RecoveryInfo,
+    SystemClock,
+    TraceEvent,
+    TraceRecorder,
+)
+from flowsemantics.trust import (
+    ReplayError,
+    ReplayMode,
+    ReplayRecord,
+    ReplayResult,
+    ShadowEntry,
+    ShadowReport,
+    record,
+    replay,
+    shadow,
+    sign,
+)
+
+__all__: list[str] = [
+    "EVENT_TYPES",
+    "OPS",
+    "REASONS",
+    "AsyncOnlyContractError",
+    "CatchRule",
+    "Clock",
+    "DecisionStatus",
+    "DecisionTable",
+    "DecisionTableRow",
+    "Effect",
+    "EvaluationError",
+    "EvaluationMode",
+    "ExecutionStatus",
+    "ExecutionTrace",
+    "FakeClock",
+    "Fallback",
+    "FinalizationBudgetExceeded",
+    "FinalizationInfo",
+    "FinallyCancellationToken",
+    "FinallyContext",
+    "FinallyFailurePolicy",
+    "Flow",
+    "FlowContext",
+    "FlowContract",
+    "FlowOutcome",
+    "FlowPortability",
+    "FlowSemanticsError",
+    "InterruptionInfo",
+    "PExpr",
+    "PortabilityError",
+    "PortableFlow",
+    "PortableRule",
+    "RecoveryInfo",
+    "ReplayError",
+    "ReplayMode",
+    "ReplayRecord",
+    "ReplayResult",
+    "Rule",
+    "RuleId",
+    "ShadowEntry",
+    "ShadowReport",
+    "StructureError",
+    "SystemClock",
+    "TraceEvent",
+    "TraceRecorder",
+    "ValidationIssue",
+    "__version__",
+    "eval_expr",
+    "expr_from_dict",
+    "expr_to_dict",
+    "pand",
+    "pconst",
+    "peq",
+    "pfield",
+    "pge",
+    "pgt",
+    "pin",
+    "pis_not_null",
+    "pis_null",
+    "ple",
+    "plt",
+    "pne",
+    "pnot",
+    "pnot_in",
+    "por",
+    "record",
+    "replay",
+    "shadow",
+    "sign",
+    "table_to_flow",
+]

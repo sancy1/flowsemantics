@@ -1,0 +1,33 @@
+{
+  "id": "036-ir-reject-then-stage",
+  "spec_version": "0.1.0",
+  "spec_section": "14.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "then-stage",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "r1",
+          "kind": "when",
+          "condition": { "op": "const", "value": true },
+          "transform": { "op": "const", "value": 1 }
+        },
+        {
+          "rule_id": "t1",
+          "kind": "then",
+          "transform": { "op": "const", "value": 2 }
+        }
+      ]
+    }
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "has_finalization": false
+  },
+  "expected_error": "then",
+  "notes": "ADR-0003: portable IR cannot carry then stages; from_ir must reject kind=then honestly."
+}

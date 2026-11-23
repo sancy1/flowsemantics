@@ -1,0 +1,37 @@
+{
+  "id": "016-error-catch-when-predicate-declines",
+  "spec_version": "0.1.0",
+  "spec_section": "11.2",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.throws", "params": { "kind": "Kind.ValueError" } }
+      }
+    ],
+    "catches": [
+      {
+        "kind": "when",
+        "exc_kind": "Kind.ValueError",
+        "predicate": { "fixture": "cond.false" },
+        "handler": { "fixture": "catch.handles", "params": { "v": "recovered" } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "FAILED",
+    "decision_status": null,
+    "value": null,
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": "Kind.ValueError",
+    "effects": []
+  },
+  "notes": "A catch_when whose predicate declines does not handle the exception; it propagates (SPEC 11.2)."
+}

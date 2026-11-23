@@ -1,0 +1,29 @@
+{
+  "id": "001-core-when-true",
+  "spec_version": "0.1.0",
+  "spec_section": "10.2",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": 42 } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": 42,
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "First vector: a single when rule whose condition is true matches, the action produces 42, outcome is COMPLETED/APPROVED."
+}

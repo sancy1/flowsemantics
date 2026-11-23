@@ -1,0 +1,52 @@
+name: docs-consumer
+
+on:
+  pull_request:
+    paths:
+      - "python/src/**"
+      - "docs/**"
+      - "python/samples/**"
+      - "scripts/**"
+      - "spec/**"
+      - "conformance/**"
+  push:
+    branches: [main]
+    paths:
+      - "python/src/**"
+      - "docs/**"
+      - "python/samples/**"
+      - "scripts/**"
+
+jobs:
+  consumer:
+    name: docs-consumer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: python/.python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build wheel to local feed
+        run: python scripts/local-wheel.py
+
+      - name: Install sample from local feed only
+        run: |
+          python -m venv .venv-consumer
+          .venv-consumer/Scripts/python -m pip install --no-index --find-links artifacts python/samples/scratch_consumer
+        shell: bash
+
+      - name: Run sample consumer
+        run: .venv-consumer/Scripts/python -m scratch_consumer.main
+        shell: bash
+
+      - name: Verify doc snippets
+        run: python scripts/docs-snippets.py

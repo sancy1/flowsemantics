@@ -1,0 +1,35 @@
+{
+  "id": "022-error-timeout-interruption",
+  "spec_version": "0.1.0",
+  "spec_section": "11.6.2",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.throws", "params": { "kind": "Kind.Timeout" } }
+      }
+    ],
+    "catches": [
+      {
+        "kind": "any",
+        "handler": { "fixture": "catch.handles", "params": { "v": "should-not-happen" } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "TIMED_OUT",
+    "decision_status": null,
+    "value": null,
+    "has_recovery": false,
+    "has_interruption": true,
+    "interruption_kind": "timed_out",
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": "Kind.Timeout",
+    "effects": []
+  },
+  "notes": "An externally-imposed timeout is recognized as TIMED_OUT, not enforced; catch rules MUST NOT catch it (SPEC 11.6.2, B1)."
+}

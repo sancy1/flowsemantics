@@ -1,0 +1,30 @@
+{
+  "id": "011-core-guard-blocks-match",
+  "spec_version": "0.1.0",
+  "spec_section": "10.1",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "guard": { "fixture": "guard.false" },
+        "action": { "fixture": "action.const", "params": { "v": "blocked" } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "NO_MATCH",
+    "value": null,
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "A false guard vetoes an otherwise-true condition (SPEC 10.1 rule tuple)."
+}

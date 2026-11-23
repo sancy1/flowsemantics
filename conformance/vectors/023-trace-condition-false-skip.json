@@ -1,0 +1,39 @@
+{
+  "id": "023-trace-condition-false-skip",
+  "spec_version": "0.1.0",
+  "spec_section": "12.1",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.false" },
+        "action": { "fixture": "action.const", "params": { "v": "no" } }
+      },
+      {
+        "id": "r2",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": "yes" } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "yes",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "trace": [
+    { "type": "rule_skipped", "rule_id": "r1", "reason": "condition_false" },
+    { "type": "action_executed", "rule_id": "r2" }
+  ],
+  "trace_subset": true,
+  "notes": "Trace records the skipped rule with reason condition_false, then the matched action (SPEC 12.1)."
+}

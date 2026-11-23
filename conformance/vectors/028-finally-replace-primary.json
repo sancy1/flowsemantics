@@ -1,0 +1,31 @@
+{
+  "id": "028-finally-replace-primary",
+  "spec_version": "0.1.0",
+  "spec_section": "11.8.3",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.throws", "params": { "kind": "Kind.ValueError" } }
+      }
+    ],
+    "finally": { "fixture": "cleanup.throws", "params": { "kind": "Kind.Any" } },
+    "finally_policy": "ReplacePrimary"
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "FAILED",
+    "decision_status": null,
+    "value": null,
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": true,
+    "is_clean": false,
+    "secondary_exceptions_count": 2,
+    "primary_exception_kind": "Kind.Any",
+    "effects": []
+  },
+  "notes": "ReplacePrimary on a FAILED outcome swaps the cleanup exception into primary and demotes the original to secondary (SPEC 11.8.3, B3-a)."
+}

@@ -1,0 +1,29 @@
+# filepath: .editorconfig
+# layer: Tooling
+# module: n/a (root)
+# since: 0.0.0
+# purpose: Declare repository-wide encoding, line endings and indentation
+# NOTES:
+#   - charset = utf-8 without BOM is the repository encoding policy.
+#   - This file does NOT forbid non-ASCII characters in prose (.md).
+#   - Source files (.py, .toml, .yaml, .json) must be ASCII; see CONTRIBUTING.md.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.{md,markdown}]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+

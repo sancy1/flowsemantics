@@ -1,0 +1,35 @@
+{
+  "id": "021-error-cancelled-interruption",
+  "spec_version": "0.1.0",
+  "spec_section": "11.6.1",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.throws", "params": { "kind": "Kind.Cancelled" } }
+      }
+    ],
+    "catches": [
+      {
+        "kind": "any",
+        "handler": { "fixture": "catch.handles", "params": { "v": "should-not-happen" } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "CANCELLED",
+    "decision_status": null,
+    "value": null,
+    "has_recovery": false,
+    "has_interruption": true,
+    "interruption_kind": "cancelled",
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": "Kind.Cancelled",
+    "effects": []
+  },
+  "notes": "Cancellation is an interruption, not an exception; it bypasses catch rules entirely (SPEC 11.6.1, 11.6.3)."
+}

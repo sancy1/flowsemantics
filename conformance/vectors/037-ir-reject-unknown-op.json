@@ -1,0 +1,28 @@
+{
+  "id": "037-ir-reject-unknown-op",
+  "spec_version": "0.1.0",
+  "spec_section": "14.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "bad-op",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "r1",
+          "kind": "when",
+          "condition": { "op": "regex_match", "args": [{ "op": "field", "value": "x" }], "value": ".*" },
+          "transform": { "op": "const", "value": 1 }
+        }
+      ]
+    }
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "has_finalization": false
+  },
+  "expected_error": "unknown",
+  "notes": "SPEC 14.2: ops outside the 15-op portable subset are rejected at deserialization."
+}

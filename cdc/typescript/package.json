@@ -1,0 +1,16 @@
+{
+  "name": "flowsemantics-cdc-typescript",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Consumer-driven contract tests for flow-semantics-ts",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "dependencies": {
+    "flow-semantics-ts": "file:../../typescript/flow-semantics-ts-0.1.0.tgz"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6"
+  }
+}

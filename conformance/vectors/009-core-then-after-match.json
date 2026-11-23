@@ -1,0 +1,34 @@
+{
+  "id": "009-core-then-after-match",
+  "spec_version": "0.1.0",
+  "spec_section": "10.5",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": "base" } }
+      },
+      {
+        "id": "t1",
+        "kind": "then",
+        "action": { "fixture": "action.prev" }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "base",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "then receives (input, previous_output); action.prev returns the previous value, proving the stage ran (SPEC 10.5)."
+}

@@ -1,0 +1,35 @@
+{
+  "id": "031-async-parity-basic",
+  "spec_version": "0.1.0",
+  "spec_section": "11.7",
+  "pipeline": {
+    "execution": "async",
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": "async-ok" } },
+        "effects": [
+          { "name": "notify" }
+        ]
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "async-ok",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": [
+      { "name": "notify" }
+    ]
+  },
+  "notes": "Async execution produces identical outcomes to sync for the same contract (SPEC 11.7 parity)."
+}

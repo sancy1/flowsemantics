@@ -1,0 +1,64 @@
+{
+  "bomFormat": "CycloneDX",
+  "components": [
+    {
+      "name": "hatchling",
+      "purl": "pkg:pypi/hatchling",
+      "scope": "required",
+      "type": "library",
+      "version": "unresolved"
+    },
+    {
+      "name": "ruff",
+      "purl": "pkg:pypi/ruff",
+      "scope": "excluded",
+      "type": "library",
+      "version": "0.17.1"
+    },
+    {
+      "name": "mypy",
+      "purl": "pkg:pypi/mypy",
+      "scope": "excluded",
+      "type": "library",
+      "version": "2.4.0"
+    },
+    {
+      "name": "pytest",
+      "purl": "pkg:pypi/pytest",
+      "scope": "excluded",
+      "type": "library",
+      "version": "9.1.1"
+    },
+    {
+      "name": "pytest-asyncio",
+      "purl": "pkg:pypi/pytest-asyncio",
+      "scope": "excluded",
+      "type": "library",
+      "version": "1.4.0"
+    },
+    {
+      "name": "uv",
+      "purl": "pkg:pypi/uv",
+      "scope": "excluded",
+      "type": "library",
+      "version": "0.13.8"
+    }
+  ],
+  "metadata": {
+    "component": {
+      "name": "flow-semantics",
+      "type": "application",
+      "version": "0.0.0"
+    },
+    "timestamp": "2026-11-22T00:00:00Z",
+    "tools": [
+      {
+        "name": "scripts/sbom.py",
+        "version": "1.0"
+      }
+    ]
+  },
+  "serialNumber": "urn:uuid:flowsemantics-python-sbom",
+  "specVersion": "1.5",
+  "version": 1
+}

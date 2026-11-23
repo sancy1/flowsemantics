@@ -1,0 +1,30 @@
+{
+  "id": "003-core-when-not-false-matches",
+  "spec_version": "0.1.0",
+  "spec_section": "10.2",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "kind": "when_not",
+        "condition": { "fixture": "cond.false" },
+        "action": { "fixture": "action.const", "params": { "v": "negated" } }
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "negated",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "when_not matches when the condition is false (SPEC 10.2)."
+}

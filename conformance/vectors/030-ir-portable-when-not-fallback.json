@@ -1,0 +1,43 @@
+{
+  "id": "030-ir-portable-when-not-fallback",
+  "spec_version": "0.1.0",
+  "spec_section": "14.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "status-routing",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "not-fraud",
+          "kind": "when_not",
+          "condition": {
+            "op": "eq",
+            "args": [
+              { "op": "field", "value": "status" },
+              { "op": "const", "value": "fraud" }
+            ]
+          },
+          "transform": { "op": "const", "value": "standard" }
+        }
+      ],
+      "fallback": { "kind": "default_if_no_match", "value": "review" }
+    }
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "standard",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "when_not matches when the condition is false; a missing field (None) is not equal to 'fraud', so the rule matches (SPEC 14.2)."
+}

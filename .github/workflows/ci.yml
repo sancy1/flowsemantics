@@ -1,0 +1,122 @@
+# filepath: .github/workflows/ci.yml
+# layer: Tooling
+# module: n/a (repository root)
+# since: 0.0.0
+# purpose: Continuous integration - lint, type-check, test, pip-consumer-path, audit
+# NOTES:
+#   - Authored in Phase 0.0; first-verified-green at Phase 1 exit (needs python/src/).
+#   - amendment 3: dependency classes stay separate (runtime=empty, build=hatchling, dev=uv+ruff+mypy+pytest).
+#   - amendment 8: pip-consumer-path asserts py.typed is inside the built wheel.
+#   - amendment 10: pip-consumer-path uses ONLY pip, never uv.
+#   - amendment 11: lint-and-test uses uv (dev tool); pip-consumer-path uses pip.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: lint+test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv (local development tool only)
+        run: python -m pip install --upgrade pip uv
+      - name: Sync dependencies (dev group included)
+        working-directory: python
+        run: uv sync --all-groups
+      - name: Ruff (lint + format check)
+        working-directory: python
+        run: uv run ruff check .
+      - name: mypy (strict)
+        working-directory: python
+        run: uv run mypy --strict src tests
+      - name: pytest
+        working-directory: python
+        run: uv run pytest -ra
+
+  pip-consumer-path:
+    name: pip-consumer-path (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      - name: Build the wheel (using pip and standard build)
+        run: |
+          python -m pip install build
+          python -m build --wheel python/
+      - name: List produced wheel
+        shell: bash
+        run: ls -la python/dist/
+      - name: Create clean venv
+        run: python -m venv .venv-clean
+      - name: Install the wheel with plain pip
+        shell: bash
+        run: |
+          if [ -f .venv-clean/bin/python ]; then
+            .venv-clean/bin/python -m pip install --upgrade pip
+            .venv-clean/bin/python -m pip install python/dist/*.whl
+          else
+            .venv-clean/Scripts/python.exe -m pip install --upgrade pip
+            .venv-clean/Scripts/python.exe -m pip install python/dist/*.whl
+          fi
+      - name: Import the installed package
+        shell: bash
+        run: |
+          if [ -f .venv-clean/bin/python ]; then
+            .venv-clean/bin/python -c "import flowsemantics; print(flowsemantics.__version__)"
+          else
+            .venv-clean/Scripts/python.exe -c "import flowsemantics; print(flowsemantics.__version__)"
+          fi
+      - name: Verify pip metadata (amendment 3: runtime deps empty)
+        shell: bash
+        run: |
+          if [ -f .venv-clean/bin/python ]; then PY=.venv-clean/bin/python; else PY=.venv-clean/Scripts/python.exe; fi
+          $PY -m pip show flow-semantics
+          REQS=$($PY -m pip show flow-semantics | grep -i "^Requires:" || true)
+          echo "Requires line: [$REQS]"
+          if [ "$REQS" != "Requires:" ]; then
+            echo "FAIL: runtime dependencies are non-empty"; exit 1
+          fi
+      - name: Verify wheel contents (amendment 8: py.typed present)
+        shell: bash
+        run: |
+          WHEEL=$(ls python/dist/*.whl | head -n1)
+          python -m zipfile -l "$WHEEL" | grep -q "flowsemantics/py.typed" || { echo "FAIL: py.typed not in wheel"; exit 1; }
+          echo "OK: py.typed present in wheel"
+
+  audit:
+    name: audit (zero third-party runtime deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run audit.py
+        run: python audit.py
+

@@ -1,0 +1,46 @@
+{
+  "id": "025-effects-proposed-order",
+  "spec_version": "0.1.0",
+  "spec_section": "6.4",
+  "pipeline": {
+    "mode": "AllMatch",
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": 1 } },
+        "effects": [
+          { "name": "e1" },
+          { "name": "e2", "payload": "second" }
+        ]
+      },
+      {
+        "id": "r2",
+        "condition": { "fixture": "cond.true" },
+        "action": { "fixture": "action.const", "params": { "v": 2 } },
+        "effects": [
+          { "name": "e3" }
+        ]
+      }
+    ]
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": 2,
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": [
+      { "name": "e1" },
+      { "name": "e2", "payload": "second" },
+      { "name": "e3" }
+    ]
+  },
+  "notes": "Effects are proposed in deterministic evaluation order under AllMatch; the library never applies them (SPEC 6.4, 5.5)."
+}

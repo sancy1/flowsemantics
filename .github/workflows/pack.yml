@@ -1,0 +1,47 @@
+# filepath: .github/workflows/pack.yml
+# layer: Tooling
+# module: n/a (repository root)
+# since: 0.0.0
+# purpose: Build wheel + sdist on tag; produce SBOM; attach to release
+# NOTES:
+#   - Uses python -m build (amendment 10: not uv).
+#   - cyclonedx-bom is an ad-hoc build tool, not a runtime or dev dependency
+#     (amendment 3). It is installed only for this job.
+#   - Package signing is a Phase 6.1 deliverable; this workflow does not sign.
+#     That is deliberate, not a silent omission.
+
+name: Pack
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    name: pack (wheel + sdist + SBOM)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build tools (ad-hoc, not project deps)
+        run: python -m pip install --upgrade pip build cyclonedx-bom
+      - name: Build wheel + sdist
+        run: python -m build python/
+      - name: Generate CycloneDX SBOM
+        run: cyclonedx-py environment --output-format json --outfile python/dist/sbom.json
+      - name: List artifacts
+        run: ls -la python/dist/
+      - name: Attach artifacts to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            python/dist/*.whl
+            python/dist/*.tar.gz
+            python/dist/sbom.json
+

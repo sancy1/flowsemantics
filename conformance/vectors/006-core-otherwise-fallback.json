@@ -1,0 +1,33 @@
+{
+  "id": "006-core-otherwise-fallback",
+  "spec_version": "0.1.0",
+  "spec_section": "10.4",
+  "pipeline": {
+    "rules": [
+      {
+        "id": "r1",
+        "condition": { "fixture": "cond.false" },
+        "action": { "fixture": "action.const", "params": { "v": "rule" } }
+      }
+    ],
+    "fallback": {
+      "kind": "otherwise",
+      "action": { "fixture": "action.const", "params": { "v": "fallback" } }
+    }
+  },
+  "input": { "fixture": "input.empty" },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "NO_MATCH",
+    "value": "fallback",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "otherwise produces the value under NO_MATCH when no rule matches (SPEC 10.4, 3.2 case b)."
+}

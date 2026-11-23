@@ -1,0 +1,110 @@
+# filepath: python/pyproject.toml
+# layer:    Tooling
+# module:   flowsemantics
+# since:    0.0.0
+# purpose:  PEP 621 project metadata and the single consolidated tooling config
+# NOTES:
+#   - Dependency classes are declared separately:
+#       runtime  -> [project].dependencies         (empty, zero third-party)
+#       build    -> [build-system].requires        (hatchling only)
+#       dev      -> [dependency-groups].dev        (ruff, mypy, pytest, uv; not shipped)
+#   - Ruff, mypy, pytest, coverage, and hatch configuration all live here.
+#     No ruff.toml, mypy.ini, or pytest.ini will be created.
+#   - requires-python >= 3.11 is required by SPEC.md section 11 (ExceptionGroup).
+#   - Version is read from the repository root VERSION file (single source of truth).
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flow-semantics"
+dynamic = ["version"]
+description = "Zero-runtime-dependency, language-neutral execution-semantics library for decision-and-error flows."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "../LICENSE" }
+authors = [{ name = "Alexander (Cyril) Sanchez" }]
+keywords = ["flow", "decision", "semantics", "trace", "replay", "conformance", "cross-language"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Documentation = "https://github.com/flowsemantics/flowsemantics/blob/main/docs/README.md"
+Changelog   = "https://github.com/flowsemantics/flowsemantics/blob/main/CHANGELOG.md"
+Source      = "https://github.com/flowsemantics/flowsemantics"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "uv>=0.4",
+    "sphinx>=7.0",
+]
+
+[tool.hatch.version]
+path = "../VERSION"
+pattern = '(?P<version>.+)'
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flowsemantics"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/flowsemantics", "../LICENSE", "../README.md"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF", "D"]
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+disallow_any_unimported = true
+no_implicit_reexport = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "conformance: language-agnostic conformance vector tests",
+    "flowsemantics_scenario: end-to-end scenario tests",
+    "slow: tests that take longer than ~1s",
+    "fuzz: seeded fuzzing tests (nightly CI only)",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["flowsemantics"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+
