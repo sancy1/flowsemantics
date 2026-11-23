@@ -34,7 +34,7 @@ jobs:
       - name: Build wheel + sdist
         run: python -m build python/
       - name: Generate CycloneDX SBOM
-        run: cyclonedx-py environment --output-format json --outfile python/dist/sbom.json
+        run: cyclonedx-py environment --output-format json -o python/dist/sbom.json
       - name: List artifacts
         run: ls -la python/dist/
       - name: Attach artifacts to the release
