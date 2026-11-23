@@ -29,6 +29,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Install Sphinx
         run: python -m pip install --upgrade pip sphinx
 
@@ -37,6 +41,14 @@ jobs:
         run: |
           python -m sphinx.ext.apidoc -o docs -f src/flowsemantics
           python -m sphinx -b html docs docs/_build/html
+
+      - name: Build TypeScript API docs (TypeDoc)
+        working-directory: typescript
+        run: |
+          npm ci
+          npx typedoc src/index.ts --tsconfig tsconfig.json \
+            --out ../site/typescript --name "FlowSemantics (TypeScript)" \
+            --excludePrivate
 
       - name: Assemble site
         run: |
@@ -78,7 +90,7 @@ jobs:
             <h2>API reference</h2>
             <ul>
               <li><a href="python/">Python (Sphinx)</a></li>
-              <li>TypeScript — <code>dist/index.d.ts</code> ships in the npm package</li>
+              <li><a href="typescript/">TypeScript (TypeDoc)</a></li>
               <li>Go — <code>go doc github.com/sancy1/flowsemantics/go</code></li>
               <li>C# — XML docs ship inside the nupkg (IDE tooltips)</li>
               <li>Java — <code>javadoc -d docs -sourcepath src flowsemantics</code></li>
