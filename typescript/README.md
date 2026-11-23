@@ -46,6 +46,8 @@ The normative specification is [SPEC.md](https://github.com/sancy1/flowsemantics
 
 ## API documentation
 
+Published docs index: https://sancy1.github.io/flowsemantics
+
 TypeScript declaration files (`dist/index.d.ts`) are generated from source
 and shipped with the package.
 

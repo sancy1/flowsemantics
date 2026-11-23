@@ -68,6 +68,8 @@ The normative specification is [SPEC.md](https://github.com/sancy1/flowsemantics
 
 ## API documentation
 
+Published docs index: https://sancy1.github.io/flowsemantics
+
 XML doc comments are the single source of truth; `GenerateDocumentationFile`
 is enabled, so `FlowSemantics.xml` ships inside the nupkg for IDE tooltips.
 

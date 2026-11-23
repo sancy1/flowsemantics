@@ -1,0 +1,104 @@
+name: Deploy docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "python/docs/**"
+      - "python/src/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Sphinx
+        run: python -m pip install --upgrade pip sphinx
+
+      - name: Build Python API docs (Sphinx)
+        working-directory: python
+        run: |
+          python -m sphinx.ext.apidoc -o docs -f src/flowsemantics
+          python -m sphinx -b html docs docs/_build/html
+
+      - name: Assemble site
+        run: |
+          mkdir -p site/python
+          cp -r python/docs/_build/html/* site/python/
+          cat > site/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>FlowSemantics — Documentation</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 52rem;
+                     margin: 4rem auto; padding: 0 1rem; line-height: 1.6; }
+              h1 { border-bottom: 2px solid #333; padding-bottom: .3rem; }
+              li { margin: .4rem 0; }
+              code { background: #f4f4f4; padding: .1rem .3rem; border-radius: 3px; }
+            </style>
+          </head>
+          <body>
+            <h1>FlowSemantics</h1>
+            <p>Decision-and-error flow semantics for five languages:
+               Python, TypeScript, Go, Java, and C#.</p>
+            <h2>Guides</h2>
+            <ul>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/features.md">Feature catalog</a> — all 62 features</li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/getting-started.md">Getting started</a> — first flow in all 5 languages</li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/cookbook.md">Cookbook</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/error-handling.md">Error handling</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/finalization.md">Finalization</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/tracing.md">Tracing</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/replay-simulation.md">Replay &amp; simulation</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/advanced-features.md">Advanced features</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/decision-tables.md">Decision tables</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/versioning.md">Versioning</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/docs/framework-integration.md">Framework integration</a></li>
+              <li><a href="https://github.com/sancy1/flowsemantics/blob/main/SPEC.md">SPEC.md</a> — normative specification</li>
+            </ul>
+            <h2>API reference</h2>
+            <ul>
+              <li><a href="python/">Python (Sphinx)</a></li>
+              <li>TypeScript — <code>dist/index.d.ts</code> ships in the npm package</li>
+              <li>Go — <code>go doc github.com/sancy1/flowsemantics/go</code></li>
+              <li>C# — XML docs ship inside the nupkg (IDE tooltips)</li>
+              <li>Java — <code>javadoc -d docs -sourcepath src flowsemantics</code></li>
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

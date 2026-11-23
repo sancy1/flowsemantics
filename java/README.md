@@ -56,6 +56,8 @@ The normative specification is [SPEC.md](https://github.com/sancy1/flowsemantics
 
 ## API documentation
 
+Published docs index: https://sancy1.github.io/flowsemantics
+
 Javadoc is generated into `docs/`:
 
 ```

@@ -44,6 +44,8 @@ Development dependencies: `ruff`, `mypy`, `pytest`, `pytest-asyncio`, `uv`, `sph
 
 ## API documentation (auto-generated HTML)
 
+Published: https://sancy1.github.io/flowsemantics/python/
+
 Docstrings are the single source of truth; Sphinx renders them to HTML,
 mirroring the C# XML file, Java Javadoc, and Go godoc output.
 
