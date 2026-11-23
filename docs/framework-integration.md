@@ -1,6 +1,18 @@
-# Framework integration
+﻿# Framework integration
 
 > Part of the [feature catalog](features.md) - all 62 features.
+
+> **Language coverage**: examples on this page are shown in Python. The
+> semantics are identical in all five languages; only the API spelling
+> differs. See [getting-started](getting-started.md) for the same example
+> in Python, TypeScript, Go, Java, and C#.
+>
+> | Concept | Python | TypeScript | Go | Java | C# |
+> |---|---|---|---|---|---|
+> | Build flow | `Flow()` | `new Flow()` | `fs.NewFlow()` | `Flow.create()` | `Flow.Create()` |
+> | Add rule | `.when(cond, then=act, id=...)` | `.when(cond, act, { id })` | `.When(cond, act, fs.WithRuleID(id))` | `.when(cond, act, id)` | `.When(cond, act, id)` |
+> | Compile | `.compile()` | `.compile()` | `.Compile()` | `.compile()` | `.Compile()` |
+> | Execute | `.try_execute(x)` | `.execute(x)` | `.TryExecute(x)` | `.tryExecute(x)` | `.TryExecute(x)` |
 
 
 > **Status**: planned — Phase 5 (framework integration) per the
