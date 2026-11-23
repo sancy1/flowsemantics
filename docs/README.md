@@ -5,6 +5,7 @@ linked from the feature or phase that produces it.
 
 ## Start here
 
+- [Feature catalog](features.md) - all 62 features described in plain language
 - [Philosophy](philosophy.md) - the official positioning (decision D10)
 - [Non-goals](non-goals.md) - explicit scope boundaries (feature F39)
 - [When not to use](when-not-to-use.md) - where native code wins
