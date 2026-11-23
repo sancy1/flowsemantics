@@ -5,7 +5,9 @@ and interruption-accounting portions of complex application logic as a
 traceable, testable, portable pipeline — with **zero runtime
 dependencies** (standard library only).
 
-Repository: [github.com/sancy1/flowsemantics](https://github.com/sancy1/flowsemantics)`n`n**Documentation:** [sancy1.github.io/flowsemantics](https://sancy1.github.io/flowsemantics/) — guides, feature catalog, and API reference
+Repository: [github.com/sancy1/flowsemantics](https://github.com/sancy1/flowsemantics)
+
+**Documentation:** [sancy1.github.io/flowsemantics](https://sancy1.github.io/flowsemantics/) — guides, feature catalog, and API reference
 
 ## Feature documentation
 
