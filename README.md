@@ -4,6 +4,18 @@ A zero-third-party-runtime-dependency, language-neutral execution-semantics libr
 
 Status: **pre-1.0, Phases 0–7 in progress**. Five conformant implementations (Python, TypeScript, Go, Java, C#/.NET) each pass 100% of the 39 conformance vectors and ship the full advanced feature surface (merge, decision tables, effective dates, cancel check, finally timeout, simulate batch, portability report, deep validate). See `PLANNING.md` and `IMPLEMENTATION_STATE.md` for verified state.
 
+## Published packages (v0.1.5)
+
+| Language | Package | Registry | API docs (auto-generated) |
+|---|---|---|---|
+| Python | `flow-semantics` | [PyPI](https://pypi.org/project/flow-semantics/) | [Sphinx](https://sancy1.github.io/flowsemantics/python/) |
+| TypeScript | `flow-semantics-ts` | [npm](https://www.npmjs.com/package/flow-semantics-ts) | [TypeDoc](https://sancy1.github.io/flowsemantics/typescript/) |
+| Go | `github.com/sancy1/flowsemantics/go` | [pkg.go.dev](https://pkg.go.dev/github.com/sancy1/flowsemantics/go) | same page (pkg.go.dev renders docs natively) |
+| Java | `io.github.sancy1:flowsemantics` | [Maven Central](https://central.sonatype.com/artifact/io.github.sancy1/flowsemantics/0.1.5) | [Javadoc](https://sancy1.github.io/flowsemantics/java/) |
+| C# / .NET | `FlowSemantics` | [NuGet](https://www.nuget.org/packages/FlowSemantics/) | [DocFX](https://sancy1.github.io/flowsemantics/csharp/) |
+
+All docs are also indexed from the [documentation site](https://sancy1.github.io/flowsemantics/).
+
 ## What this library is
 
 FlowSemantics expresses the decision, error-recovery, guaranteed-cleanup, and interruption-accounting portions of complex application logic as a traceable, testable, portable pipeline. It is an optional higher-level execution model for the cases where a decision becomes an object of concern — where it must be traced, tested, simulated, versioned, audited, ported across languages, externalized into data, or validated for structural soundness.
