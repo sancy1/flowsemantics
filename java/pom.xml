@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.flowsemantics</groupId>
+  <groupId>io.github.sancy1</groupId>
   <artifactId>flowsemantics</artifactId>
   <version>0.1.4</version>
   <packaging>jar</packaging>
@@ -24,7 +24,7 @@
   <developers>
     <developer>
       <name>FlowSemantics</name>
-      <url>https://github.com/flowsemantics</url>
+      <url>https://github.com/sancy1/flowsemantics</url>
     </developer>
   </developers>
 
@@ -32,13 +32,12 @@
     <connection>scm:git:https://github.com/sancy1/flowsemantics.git</connection>
     <developerConnection>scm:git:https://github.com/sancy1/flowsemantics.git</developerConnection>
     <url>https://github.com/sancy1/flowsemantics</url>
-    <tag>v0.1.0</tag>
+    <tag>v0.1.4</tag>
   </scm>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
-    <project.version>0.1.0</project.version>
   </properties>
 
   <build>
@@ -86,23 +85,11 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-gpg-plugin</artifactId>
-        <version>3.2.7</version>
-        <executions>
-          <execution>
-            <id>sign-artifacts</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>sign</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- Maven Central Portal publishing (new central.sonatype.com flow).
-           Requires: verified namespace com.flowsemantics and credentials
-           configured via `mvn central-publishing:configure` or settings.xml. -->
+      <!-- Maven Central Portal publishing (central.sonatype.com).
+           Namespace io.github.sancy1 is verified via the linked GitHub
+           account — no DNS TXT record needed.
+           GPG signing is NOT required by Central Portal; checksums suffice.
+           Credentials come from GitHub secrets via settings.xml in CI. -->
       <plugin>
         <groupId>org.sonatype.central</groupId>
         <artifactId>central-publishing-maven-plugin</artifactId>
