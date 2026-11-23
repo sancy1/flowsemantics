@@ -16,7 +16,7 @@ Repository: [github.com/sancy1/flowsemantics](https://github.com/sancy1/flowsema
 | NuGet package | `FlowSemantics` |
 | Namespace | `FlowSemantics` |
 | Target framework | `net10.0` |
-| Version | `0.1.1` |
+| Version | `0.1.5` |
 
 ## Projects
 
@@ -36,7 +36,7 @@ dotnet add package FlowSemantics
 Or in your `.csproj`:
 
 ```xml
-<PackageReference Include="FlowSemantics" Version="0.1.1" />
+<PackageReference Include="FlowSemantics" Version="0.1.5" />
 ```
 
 ## Building and packing (from source)
@@ -47,7 +47,7 @@ dotnet build FlowSemantics.Runner/FlowSemantics.Runner.csproj -c Release
 dotnet pack FlowSemantics/FlowSemantics.csproj -c Release -o dist
 ```
 
-Produces `dist/FlowSemantics.0.1.1.nupkg`.
+Produces `dist/FlowSemantics.0.1.5.nupkg`.
 
 ## Feature documentation
 
@@ -70,7 +70,10 @@ The normative specification is [SPEC.md](https://github.com/sancy1/flowsemantics
 
 ## API documentation
 
-Published docs index: https://sancy1.github.io/flowsemantics
+Auto-generated API reference (DocFX):
+**https://sancy1.github.io/flowsemantics/csharp/**
+
+Docs index: https://sancy1.github.io/flowsemantics
 
 XML doc comments are the single source of truth; `GenerateDocumentationFile`
 is enabled, so `FlowSemantics.xml` ships inside the nupkg for IDE tooltips.
