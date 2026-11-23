@@ -38,9 +38,9 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Documentation = "https://github.com/flowsemantics/flowsemantics/blob/main/docs/README.md"
-Changelog   = "https://github.com/flowsemantics/flowsemantics/blob/main/CHANGELOG.md"
-Source      = "https://github.com/flowsemantics/flowsemantics"
+Documentation = "https://sancy1.github.io/flowsemantics/"
+Changelog   = "https://github.com/sancy1/flowsemantics/blob/main/CHANGELOG.md"
+Source      = "https://github.com/sancy1/flowsemantics"
 
 [dependency-groups]
 dev = [
