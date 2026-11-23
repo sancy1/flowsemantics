@@ -97,9 +97,9 @@ jobs:
         run: |
           if [ -f .venv-clean/bin/python ]; then PY=.venv-clean/bin/python; else PY=.venv-clean/Scripts/python.exe; fi
           $PY -m pip show flow-semantics
-          REQS=$($PY -m pip show flow-semantics | grep -i "^Requires:" || true)
+          REQS=$($PY -m pip show flow-semantics | grep -i "^Requires:" | sed 's/^[Rr]equires://' | tr -d '[:space:]' || true)
           echo "Requires line: [$REQS]"
-          if [ "$REQS" != "Requires:" ]; then
+          if [ -n "$REQS" ]; then
             echo "FAIL: runtime dependencies are non-empty"; exit 1
           fi
       - name: "Verify wheel contents (amendment 8: py.typed present)"
