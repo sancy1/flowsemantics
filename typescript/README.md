@@ -48,10 +48,14 @@ The normative specification is [SPEC.md](https://github.com/sancy1/flowsemantics
 
 ## API documentation
 
-Published docs index: https://sancy1.github.io/flowsemantics
+**TypeScript API reference (TypeDoc):**
+https://sancy1.github.io/flowsemantics/typescript/
 
-TypeScript declaration files (`dist/index.d.ts`) are generated from source
-and shipped with the package.
+Docs index (all guides + all languages):
+https://sancy1.github.io/flowsemantics
+
+TypeScript declaration files (`dist/index.d.ts`) are also generated from
+source and shipped inside the npm package.
 
 ## Consumer-driven contract tests
 
