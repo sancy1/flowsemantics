@@ -6,7 +6,7 @@
 
   <groupId>io.github.sancy1</groupId>
   <artifactId>flowsemantics</artifactId>
-  <version>0.1.4</version>
+  <version>0.1.5</version>
   <packaging>jar</packaging>
 
   <name>FlowSemantics</name>
@@ -32,7 +32,7 @@
     <connection>scm:git:https://github.com/sancy1/flowsemantics.git</connection>
     <developerConnection>scm:git:https://github.com/sancy1/flowsemantics.git</developerConnection>
     <url>https://github.com/sancy1/flowsemantics</url>
-    <tag>v0.1.4</tag>
+    <tag>v0.1.5</tag>
   </scm>
 
   <properties>
