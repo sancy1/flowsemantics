@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	fs "github.com/flowsemantics/flowsemantics-go"
+	fs "github.com/sancy1/flowsemantics/go"
 )
 
 type Vector struct {
