@@ -92,7 +92,7 @@ jobs:
           else
             .venv-clean/Scripts/python.exe -c "import flowsemantics; print(flowsemantics.__version__)"
           fi
-      - name: Verify pip metadata (amendment 3: runtime deps empty)
+      - name: "Verify pip metadata (amendment 3: runtime deps empty)"
         shell: bash
         run: |
           if [ -f .venv-clean/bin/python ]; then PY=.venv-clean/bin/python; else PY=.venv-clean/Scripts/python.exe; fi
@@ -102,7 +102,7 @@ jobs:
           if [ "$REQS" != "Requires:" ]; then
             echo "FAIL: runtime dependencies are non-empty"; exit 1
           fi
-      - name: Verify wheel contents (amendment 8: py.typed present)
+      - name: "Verify wheel contents (amendment 8: py.typed present)"
         shell: bash
         run: |
           WHEEL=$(ls python/dist/*.whl | head -n1)
