@@ -23,7 +23,7 @@ dynamic = ["version"]
 description = "Zero-runtime-dependency, language-neutral execution-semantics library for decision-and-error flows."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { file = "../LICENSE" }
+license = { file = "LICENSE" }
 authors = [{ name = "Alexander (Cyril) Sanchez" }]
 keywords = ["flow", "decision", "semantics", "trace", "replay", "conformance", "cross-language"]
 classifiers = [
@@ -53,14 +53,14 @@ dev = [
 ]
 
 [tool.hatch.version]
-path = "../VERSION"
+path = "VERSION"
 pattern = '(?P<version>.+)'
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flowsemantics"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/flowsemantics", "../LICENSE", "../README.md"]
+include = ["src/flowsemantics", "LICENSE", "VERSION", "README.md"]
 
 [tool.ruff]
 line-length = 100

@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent
 PYPROJECT = ROOT / "python" / "pyproject.toml"
 SRC_DIR = ROOT / "python" / "src" / "flowsemantics"
 
-ALLOWED_DEV_TOOLS = {"ruff", "mypy", "pytest", "pytest-asyncio", "uv"}
+ALLOWED_DEV_TOOLS = {"ruff", "mypy", "pytest", "pytest-asyncio", "uv", "sphinx"}
 ALLOWED_BUILD_REQUIRES = {"hatchling"}
 SELF_PACKAGE = "flowsemantics"
 ALLOWLISTED_SOURCE_DIRS = {"interfaces", "testing"}
@@ -34,12 +34,15 @@ BANNED_AMBIENT_TIME = {
 
 results: list[tuple[str, bool, str]] = []
 
+
 def record(name: str, passed: bool, detail: str) -> None:
     results.append((name, passed, detail))
+
 
 def fail_early(msg: str) -> "None":
     print(f"ERROR: {msg}", file=sys.stderr)
     sys.exit(2)
+
 
 def main() -> int:
     if not PYPROJECT.is_file():
@@ -69,7 +72,9 @@ def main() -> int:
     record(
         "dev-group-known-tools-only",
         not unknown_dev,
-        f"unknown dev tools: {sorted(unknown_dev)}" if unknown_dev else f"dev = {sorted(dev_names)}",
+        f"unknown dev tools: {sorted(unknown_dev)}"
+        if unknown_dev
+        else f"dev = {sorted(dev_names)}",
     )
 
     # 3. build requires hatchling only
@@ -118,13 +123,17 @@ def main() -> int:
                     for a in node.names:
                         top = a.name.split(".")[0]
                         if top not in sys.stdlib_module_names and top != SELF_PACKAGE:
-                            violations.append(f"{py}:{node.lineno}: non-stdlib import {a.name!r}")
+                            violations.append(
+                                f"{py}:{node.lineno}: non-stdlib import {a.name!r}"
+                            )
                 elif isinstance(node, ast.ImportFrom):
                     if node.module is None:
                         continue
                     top = node.module.split(".")[0]
                     if top not in sys.stdlib_module_names and top != SELF_PACKAGE:
-                        violations.append(f"{py}:{node.lineno}: non-stdlib import {node.module!r}")
+                        violations.append(
+                            f"{py}:{node.lineno}: non-stdlib import {node.module!r}"
+                        )
                 elif isinstance(node, ast.Call):
                     if isinstance(node.func, ast.Attribute):
                         if isinstance(node.func.value, ast.Name):
@@ -151,6 +160,6 @@ def main() -> int:
     print("PASS" if all_pass else "FAIL")
     return 0 if all_pass else 1
 
+
 if __name__ == "__main__":
     sys.exit(main())
-
