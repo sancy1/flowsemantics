@@ -9,6 +9,39 @@ Repository: [github.com/sancy1/flowsemantics](https://github.com/sancy1/flowsema
 
 **Documentation:** [sancy1.github.io/flowsemantics](https://sancy1.github.io/flowsemantics/) — guides, feature catalog, and API reference
 
+## What it does
+
+FlowSemantics turns complex decision-and-error logic into a **compiled,
+inspectable contract**: conditions, actions, typed exception recovery,
+guaranteed cleanup (`finally`), cancellation/timeout accounting, proposed
+side effects, structured traces, and deterministic replay/simulation —
+all versioned and portable across five languages (Python, TypeScript,
+Go, Java, C#) from one normative spec ([SPEC.md](https://github.com/sancy1/flowsemantics/blob/main/SPEC.md)).
+
+## Quick start
+
+```python
+from flowsemantics import Flow
+
+contract = (
+    Flow()
+    .when(lambda o: o["total"] > 100, then=lambda o: "approved", id="large")
+    .when_not(lambda o: o["total"] > 100, then=lambda o: "rejected", id="small")
+    .compile()
+)
+
+outcome = contract.try_execute({"total": 250})
+outcome.execution_status  # ExecutionStatus.COMPLETED
+outcome.decision_status   # DecisionStatus.APPROVED
+outcome.value             # 'approved'
+```
+
+`compile()` validates the flow once; `try_execute()` always returns a
+`FlowOutcome` (never raises unrecovered exceptions — use `execute()` when
+you want them raised). Full walkthrough:
+[getting-started](https://github.com/sancy1/flowsemantics/blob/main/docs/getting-started.md)
+(in all five languages).
+
 ## Feature documentation
 
 The language-neutral feature guides live in the
