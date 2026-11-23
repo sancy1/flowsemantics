@@ -50,6 +50,7 @@ Cross-language advanced surface:
 
 ## Repository-level documents
 
+- [Multi-language release playbook](multi-language-release-playbook.md) - the full discipline for shipping five language packages to five registries with auto-generated docs (tests, CDC, audits, publishing, pitfalls)
 - [README](../README.md) - project entry point
 - [CONTRIBUTING](../CONTRIBUTING.md) - how to contribute
 - [CHANGELOG](../CHANGELOG.md) - release history
