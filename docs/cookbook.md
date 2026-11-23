@@ -1,5 +1,8 @@
 # Cookbook
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 Canonical before/after patterns. Every snippet here is exercised by a
 sample or a conformance vector.
 

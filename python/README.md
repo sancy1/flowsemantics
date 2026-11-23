@@ -8,6 +8,7 @@ For the full project documentation, see the repository root `README.md`.
 
 The language-neutral feature guides live in `../docs/`:
 
+- `../docs/features.md` � all 62 features catalog
 - `../docs/getting-started.md` — first flow
 - `../docs/decision-tables.md` — decision tables and hit policies
 - `../docs/error-handling.md` — catch/rethrow/finally semantics

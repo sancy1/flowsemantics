@@ -1,5 +1,8 @@
 # Framework integration
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 > **Status**: planned — Phase 5 (framework integration) per the
 > implementation plan. This page will document FastAPI/ASGI integration
 > patterns when that phase ships.

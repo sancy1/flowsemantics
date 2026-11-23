@@ -1,5 +1,8 @@
 # Getting started with FlowSemantics
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 FlowSemantics expresses decision-and-error flows as a compiled,
 inspectable contract. You build a `Flow`, `compile()` it into an
 immutable `FlowContract`, and `execute()` or `try_execute()` it.

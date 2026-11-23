@@ -1,5 +1,8 @@
 # Decision tables
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 `DecisionTable` (SPEC.md Section 10.8): a column-based table of
 condition→action rows that compiles to the same rule list as the fluent
 API. Hit policies are DMN-aligned.

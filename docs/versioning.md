@@ -1,5 +1,8 @@
 # Versioning and release policy
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 FlowSemantics versions three things independently: the **package**
 (SemVer), the **specification** (SPEC.md, its own version line), and each
 **language implementation** (SemVer per package). This page defines the

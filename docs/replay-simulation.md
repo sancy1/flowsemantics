@@ -1,5 +1,8 @@
 # Replay and simulation
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 Trust-layer operations (SPEC.md Sections 12.5–12.7, 9.5): simulate,
 replay, and shadow — all deterministic, all fail-closed.
 

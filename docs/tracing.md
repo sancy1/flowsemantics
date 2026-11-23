@@ -1,5 +1,8 @@
 # Tracing
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 Execution traces (SPEC.md Sections 3.8, 12.1–12.3): an ordered,
 immutable record of what the engine did — zero cost when disabled.
 

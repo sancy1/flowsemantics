@@ -1,5 +1,8 @@
 # Advanced features
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 Cross-language reference for the advanced FlowSemantics surface: flow
 composition, decision tables, effective dates, cooperative cancellation,
 batch simulation, portability reporting, deep validation, and finalization

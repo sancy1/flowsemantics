@@ -1,5 +1,8 @@
 # Finalization
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 Outcome-aware finalization (SPEC.md Sections 11.8, 16): `finally_`
 registers cleanup that runs for **every** outcome status, including
 FAILED, CANCELLED, and TIMED_OUT.

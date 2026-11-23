@@ -1,5 +1,8 @@
 # Error handling
 
+> Part of the [feature catalog](features.md) - all 62 features.
+
+
 FlowSemantics error semantics (SPEC.md Sections 11.1–11.6): catch rules,
 hooks, cancellation, and timeout recognition.
 

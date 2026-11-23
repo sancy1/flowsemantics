@@ -60,6 +60,7 @@ The package ships `py.typed` (PEP 561). Downstream `mypy` and `pyright` users ge
 
 Start at `docs/README.md`.
 
+- `docs/features.md` — all 62 features described in plain language
 - `docs/philosophy.md` — the official positioning
 - `docs/non-goals.md` — explicit scope boundaries
 - `docs/when-not-to-use.md` — where native code wins
