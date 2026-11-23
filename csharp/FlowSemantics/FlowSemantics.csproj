@@ -7,7 +7,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
     <PackageId>FlowSemantics</PackageId>
-    <Version>0.1.3</Version>
+    <Version>0.1.4</Version>
     <Authors>FlowSemantics</Authors>
     <Description>FlowSemantics .NET implementation — conformance target per SPEC 14.5</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
