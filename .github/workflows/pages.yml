@@ -33,6 +33,15 @@ jobs:
         with:
           node-version: "22"
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
       - name: Install Sphinx
         run: python -m pip install --upgrade pip sphinx
 
@@ -49,6 +58,18 @@ jobs:
           npx typedoc src/index.ts --tsconfig tsconfig.json \
             --out ../site/typescript --name "FlowSemantics (TypeScript)" \
             --excludePrivate
+
+      - name: Build Java API docs (Javadoc)
+        working-directory: java
+        run: |
+          javadoc -quiet -encoding UTF-8 -Xdoclint:none -d ../site/java \
+            $(find src/flowsemantics -maxdepth 1 -name '*.java' | sort | tr '\n' ' ')
+
+      - name: Build C# API docs (DocFX)
+        run: |
+          dotnet tool install -g docfx
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          docfx build docfx.json
 
       - name: Assemble site
         run: |
@@ -92,8 +113,8 @@ jobs:
               <li><a href="python/">Python (Sphinx)</a></li>
               <li><a href="typescript/">TypeScript (TypeDoc)</a></li>
               <li>Go — <code>go doc github.com/sancy1/flowsemantics/go</code></li>
-              <li>C# — XML docs ship inside the nupkg (IDE tooltips)</li>
-              <li>Java — <code>javadoc -d docs -sourcepath src flowsemantics</code></li>
+              <li><a href="csharp/">C# (DocFX)</a></li>
+              <li><a href="java/">Java (Javadoc)</a></li>
             </ul>
           </body>
           </html>
