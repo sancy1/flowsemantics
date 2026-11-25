@@ -50,7 +50,11 @@ jobs:
           python -m venv .venv-consumer
           VENV_PY=.venv-consumer/bin/python
           [ -f "$VENV_PY" ] || VENV_PY=.venv-consumer/Scripts/python.exe
-          "$VENV_PY" -m pip install --no-index --find-links artifacts python/samples/scratch_consumer
+          # hatchling is only the sample's build backend — the library
+          # itself still comes exclusively from artifacts/ (--no-index).
+          "$VENV_PY" -m pip install hatchling
+          "$VENV_PY" -m pip install --no-index --no-build-isolation \
+            --find-links artifacts python/samples/scratch_consumer
         shell: bash
 
       - name: Run sample consumer
