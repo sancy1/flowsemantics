@@ -45,23 +45,22 @@ jobs:
       - name: Build wheel to local feed
         run: python scripts/local-wheel.py
 
-      - name: Install sample from local feed only
+      - name: Install library wheel from local feed only
         run: |
           python -m venv .venv-consumer
           VENV_PY=.venv-consumer/bin/python
           [ -f "$VENV_PY" ] || VENV_PY=.venv-consumer/Scripts/python.exe
-          # hatchling is only the sample's build backend — the library
-          # itself still comes exclusively from artifacts/ (--no-index).
-          "$VENV_PY" -m pip install hatchling
-          "$VENV_PY" -m pip install --no-index --no-build-isolation \
-            --find-links artifacts python/samples/scratch_consumer
+          # Only the library comes from artifacts/ — the sample itself is
+          # run from source (its own packaging is incidental to this test).
+          "$VENV_PY" -m pip install --no-index --find-links artifacts flow-semantics
         shell: bash
 
       - name: Run sample consumer
         run: |
           VENV_PY=.venv-consumer/bin/python
           [ -f "$VENV_PY" ] || VENV_PY=.venv-consumer/Scripts/python.exe
-          "$VENV_PY" -m scratch_consumer.main
+          cd python/samples/scratch_consumer
+          "$VENV_PY" main.py
         shell: bash
 
       - name: Verify doc snippets
