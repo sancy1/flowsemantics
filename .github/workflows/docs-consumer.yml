@@ -9,6 +9,7 @@ on:
       - "scripts/**"
       - "spec/**"
       - "conformance/**"
+      - ".github/workflows/docs-consumer.yml"
   push:
     branches: [main]
     paths:
@@ -16,6 +17,7 @@ on:
       - "docs/**"
       - "python/samples/**"
       - "scripts/**"
+      - ".github/workflows/docs-consumer.yml"
 
 jobs:
   consumer:
@@ -41,11 +43,16 @@ jobs:
       - name: Install sample from local feed only
         run: |
           python -m venv .venv-consumer
-          .venv-consumer/Scripts/python -m pip install --no-index --find-links artifacts python/samples/scratch_consumer
+          VENV_PY=.venv-consumer/bin/python
+          [ -f "$VENV_PY" ] || VENV_PY=.venv-consumer/Scripts/python.exe
+          "$VENV_PY" -m pip install --no-index --find-links artifacts python/samples/scratch_consumer
         shell: bash
 
       - name: Run sample consumer
-        run: .venv-consumer/Scripts/python -m scratch_consumer.main
+        run: |
+          VENV_PY=.venv-consumer/bin/python
+          [ -f "$VENV_PY" ] || VENV_PY=.venv-consumer/Scripts/python.exe
+          "$VENV_PY" -m scratch_consumer.main
         shell: bash
 
       - name: Verify doc snippets
