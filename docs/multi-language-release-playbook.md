@@ -281,26 +281,141 @@ Set once per repo (Settings → Secrets → Actions):
 
 ---
 
-## 8. Release checklist (run in order)
+## 8. Post-release verification — smoke test the PUBLISHED artifacts
+
+CI green means the repo builds. It does NOT mean the published artifact
+works. After every release, install from the registry into a clean
+environment and execute real behavior:
+
+| Registry | Smoke test |
+|---|---|
+| PyPI | fresh `venv` → `pip install <pkg>` → run a real flow/request, assert output |
+| npm | fresh dir → `npm install <pkg>` → run a real flow/request |
+| NuGet | fresh console project → `dotnet add package` → run |
+| Maven | download jar from Central → `javac`/`java` a consumer |
+| Go | fresh module → `go get <mod>@<ver>` → `go run` a consumer |
+
+Rules:
+
+- **Never test against local source** — editable installs and `PYTHONPATH`
+  tricks prove nothing about the artifact. Verify `pkg.__file__` /
+  `node_modules` actually points at site-packages, not your repo.
+- **Assert behavior, not just import** — a package that imports but returns
+  wrong values is broken. Run the same input through every language and
+  diff the outputs (decision status, value, envelope shape).
+- Automate it as a script (`scripts/smoke-*.py` or a workflow) so every
+  release repeats it identically.
+
+---
+
+## 9. CDCT vs conformance — know which proves what
+
+Two different disciplines, both required:
+
+- **Docs-snippet CDCT** (`docs-snippets.py`, `cdct.py`): extracts code
+  blocks from docs and verifies referenced names exist. Catches doc/API
+  drift. **Does NOT test logic.** Pitfall we hit: the extractor must filter
+  fenced blocks by language tag (` ```python ` only) — parsing a
+  ` ```typescript ` block with `ast.parse` fails every time.
+- **Conformance vectors**: shared JSON vectors every language must pass —
+  THIS is the business-logic contract. Byte-identical outputs across all
+  implementations. If you only have doc-snippet checks, you have proven
+  nothing about behavior.
+
+---
+
+## 10. Monorepo / multi-package pitfalls (learned on ApiPilot-Ports)
+
+When one repo publishes several packages (per language or per package):
+
+1. **Per-language tag prefixes** — `python/v*`, `typescript/v*`, `go/v*`
+   triggers, NOT bare `v*`. Otherwise one language's release fires every
+   publish workflow.
+2. **Go subdirectory modules need prefixed tags** — module
+   `github.com/u/repo/go` is tagged `go/v0.1.0`, not `v0.1.0`.
+   `go get` reports "unknown revision" otherwise.
+3. **LICENSE must exist at the tagged tree** — pkg.go.dev refuses docs
+   without it ("license restrictions"). For subdirectory modules, put
+   `LICENSE` in BOTH repo root and the module dir. Tags are immutable —
+   a missing LICENSE means a whole new patch release.
+4. **Registry metadata is baked at publish time** — npm `repository`/
+   `homepage`/`bugs`, PyPI `project.urls`, NuGet csproj URLs. Missing them
+   = bare registry page with no doc links = forced patch re-release.
+   **Batch ALL manifest metadata BEFORE the first tag.**
+5. **`file:` deps in monorepos** — keep `file:../core` for local dev;
+   rewrite to `^<version>` inside the publish workflow only (read the
+   dep's own version, not the dependent's).
+6. **npm scoped packages need the scope to exist first** — create the org
+   (`@apipilot`) before tagging or publishes 404.
+7. **GitHub secret names: `[A-Za-z0-9_]` only** — hyphens rejected.
+8. **Propagation lag is real** — sum.golang.org 404s new tags for minutes;
+   pkg.go.dev indexes the module before its sub-packages; npm shows
+   "awaiting staging"/missing README until re-index. Warm the Go proxy
+   with `go get` (`GOSUMDB=off` if sumdb lags) and hard-refresh registry
+   pages before concluding failure.
+9. **Matrix `fail-fast` cancels siblings** — one leg's failure cancels the
+   others, hiding whether they would have passed. Add
+   `fail-fast: false` to strategy when legs are independent.
+
+---
+
+## 11. GitHub Actions portability pitfalls (docs-consumer fixes)
+
+1. **venv layout differs per OS** — Windows: `.venv/Scripts/python.exe`,
+   Linux/macOS: `.venv/bin/python`. Detect with `[ -f ... ] ||` fallback.
+   Hardcoding `Scripts/` fails on ubuntu+macos legs.
+2. **`python-version-file` patch pins break on new runner images** —
+   `3.11.9` didn't exist for Ubuntu 26.04. Pin the minor (`"3.11"`) in
+   workflows; keep exact pins in `.python-version` for local dev only.
+3. **`python -m build` needs the `build` package installed first** — it's
+   not in the stdlib or preinstalled on runners.
+4. **Sample/package build isolation vs `--no-index`** — installing a local
+   sample dir with `--no-index` fails because PEP 517 can't fetch its
+   build backend (hatchling). Either preinstall the backend +
+   `--no-build-isolation`, or skip packaging the sample entirely and run
+   `main.py` directly — the wheel is what you're testing anyway.
+5. **`cd` breaks relative paths in later steps** — use
+   `$GITHUB_WORKSPACE/...` absolute paths after changing directory.
+6. **Path filters must include the workflow file itself** if you want
+   workflow fixes to retrigger the workflow.
+
+---
+
+## 12. Security notes
+
+- **Never paste tokens/API keys in chat or commits** — an npm token pasted
+  in a support chat had to be revoked mid-release. Use `npm login` /
+  `gh auth` interactively; store only in GitHub Secrets.
+- GPG private keys for Maven: ASCII-armored, full file including
+  BEGIN/END lines, into `GPG_PRIVATE_KEY` secret only.
+
+---
+
+## 13. Release checklist (run in order)
 
 ```
 [ ] 1. All tests green locally: unit + conformance (100%) + CDC per language
 [ ] 2. audit.py passes (zero runtime deps)
 [ ] 3. docs/ updated; every language README is package-facing with absolute links
-[ ] 4. All five versions bumped together (VERSION files + manifests)
-[ ] 5. CHANGELOG.md entry written
-[ ] 6. Commit "release vX.Y.Z" → tag vX.Y.Z → push commit AND tag
-[ ] 7. Watch all publish workflows go green (PyPI, npm, NuGet, Maven, Pages)
-[ ] 8. Maven only: confirm Central Portal shows "Published" (autoPublish)
-[ ] 9. Verify live pages: PyPI, npm, pkg.go.dev, NuGet, central.sonatype.com
-[ ] 10. Verify docs site: all 4 API doc sections render (hard-refresh!)
-[ ] 11. Repo README package table links all resolve
-[ ] 12. Note indexing lag: search.maven.org, javadoc.io, pkg.go.dev take hours
+[ ] 4. ALL manifest metadata final: repository/homepage/bugs/urls/LICENSE —
+       registry pages are immutable per version, batch BEFORE tagging
+[ ] 5. All versions bumped together (VERSION files + manifests)
+[ ] 6. CHANGELOG.md entry written
+[ ] 7. Commit "release vX.Y.Z" → tag (per-language prefix in monorepos) → push
+[ ] 8. Watch all publish workflows go green (PyPI, npm, NuGet, Maven, Pages)
+[ ] 9. Maven only: confirm Central Portal shows "Published" (autoPublish)
+[ ] 10. SMOKE TEST every published artifact from its registry (see §8)
+[ ] 11. Verify live pages: PyPI, npm, pkg.go.dev, NuGet, central.sonatype.com
+       — each shows README + docs/repo links
+[ ] 12. Verify docs site: all API doc sections render (hard-refresh!)
+[ ] 13. Repo README package table links all resolve
+[ ] 14. Note indexing lag: search.maven.org, javadoc.io, pkg.go.dev,
+        pkg sub-packages, npm new packages take minutes–hours
 ```
 
 ---
 
-## 9. Timeline expectations (set expectations early)
+## 14. Timeline expectations (set expectations early)
 
 | Event | Latency |
 |---|---|
@@ -314,7 +429,7 @@ Set once per repo (Settings → Secrets → Actions):
 
 ---
 
-## 10. The one-paragraph summary
+## 15. The one-paragraph summary
 
 Conformance vectors keep five languages honest; package-facing READMEs with
 absolute doc links make registry pages useful; manifest metadata (not just
