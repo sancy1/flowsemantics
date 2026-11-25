@@ -32,7 +32,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: python/.python-version
+          # Minor version only — patch pins (e.g. 3.11.9) are not always
+          # published for every runner image (Ubuntu 26.04 lacks 3.11.9).
+          python-version: "3.11"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
