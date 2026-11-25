@@ -33,19 +33,23 @@ def _public_names() -> set[str]:
 
 
 def _iter_python_blocks(path: Path):
+    """Yield body of each ```python fenced block (other languages skipped)."""
     text = path.read_text(encoding="utf-8")
     in_block = False
+    is_python = False
     buf: list[str] = []
     for line in text.splitlines():
-        if line.strip().startswith("```"):
-            if in_block:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if in_block and is_python and buf:
                 yield "\n".join(buf)
-                buf = []
+            buf = []
             in_block = not in_block
+            is_python = in_block and stripped[3:].strip().lower() in ("python", "py")
             continue
         if in_block:
             buf.append(line)
-    if buf:
+    if in_block and is_python and buf:
         yield "\n".join(buf)
 
 
