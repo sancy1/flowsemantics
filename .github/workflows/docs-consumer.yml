@@ -57,8 +57,8 @@ jobs:
 
       - name: Run sample consumer
         run: |
-          VENV_PY=.venv-consumer/bin/python
-          [ -f "$VENV_PY" ] || VENV_PY=.venv-consumer/Scripts/python.exe
+          VENV_PY=$GITHUB_WORKSPACE/.venv-consumer/bin/python
+          [ -f "$VENV_PY" ] || VENV_PY=$GITHUB_WORKSPACE/.venv-consumer/Scripts/python.exe
           cd python/samples/scratch_consumer
           "$VENV_PY" main.py
         shell: bash
