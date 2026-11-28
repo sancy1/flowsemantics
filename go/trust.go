@@ -16,28 +16,51 @@ import (
 const SpecVersion = "0.1.0"
 
 // ContractVersion computes the structural contract version (SPEC 12.9,
-// algorithm v1): SHA-256 of canonical JSON, truncated to 32 hex chars.
-// Identical payload shape to the Python reference for cross-language
-// version equality.
+// algorithm v2): SHA-256 of canonical JSON, truncated to 32 hex chars.
+// The payload covers portable rule bodies (condition/guard/transform
+// expressions and effects) so that rule-body changes invalidate replay
+// records; native (func) rule bodies are marked "native": true because
+// callables are not serializable. Effective dates are epoch
+// milliseconds, matching the Python/C#/Java/TS reference payloads.
 func ContractVersion(rules []Rule, fallback *Fallback, mode EvaluationMode,
 	catches []CatchRule, finalizerCount int, policy FinallyFailurePolicy,
-	finallyTimeoutMs int64, traceEnabled bool) string {
+	finallyTimeoutMs int64, traceEnabled bool, portableRules []PortableRule) string {
 	ruleList := make([]map[string]any, 0, len(rules))
-	for _, r := range rules {
+	for i, r := range rules {
 		var ef, eu any
 		if r.EffectiveFrom != nil { ef = *r.EffectiveFrom }
 		if r.EffectiveUntil != nil { eu = *r.EffectiveUntil }
-		ruleList = append(ruleList, map[string]any{
+		var pr *PortableRule
+		if i < len(portableRules) { pr = &portableRules[i] }
+		entry := map[string]any{
 			"id": r.ID, "kind": r.Kind, "priority": r.Priority,
 			"effective_from": ef, "effective_until": eu,
-		})
+			"native": pr == nil,
+		}
+		if pr != nil {
+			entry["condition"] = ExprToDict(pr.Condition)
+			entry["guard"] = ExprToDict(pr.Guard)
+			entry["transform"] = ExprToDict(pr.Transform)
+		} else {
+			entry["condition"] = nil
+			entry["guard"] = nil
+			entry["transform"] = nil
+		}
+		effects := make([]map[string]any, 0, len(r.Effects))
+		for _, e := range r.Effects {
+			effects = append(effects, map[string]any{
+				"name": e.Name, "payload": jsonSafe(e.Payload),
+			})
+		}
+		entry["effects"] = effects
+		ruleList = append(ruleList, entry)
 	}
 	var fb any
 	if fallback != nil { fb = fallback.Kind }
 	catchKinds := make([]string, 0, len(catches))
 	for _, c := range catches { catchKinds = append(catchKinds, c.Kind) }
 	payload := map[string]any{
-		"algorithm":          "flowsemantics-contract-v1",
+		"algorithm":          "flowsemantics-contract-v2",
 		"rules":              ruleList,
 		"fallback":           fb,
 		"mode":               string(mode),
@@ -50,6 +73,16 @@ func ContractVersion(rules []Rule, fallback *Fallback, mode EvaluationMode,
 	canonical, _ := json.Marshal(payload) // Go marshals map keys sorted
 	sum := sha256.Sum256(canonical)
 	return hex.EncodeToString(sum[:])[:32]
+}
+
+// jsonSafe returns v if it is JSON-marshalable, otherwise a stable string
+// form, so contract hashing never fails on exotic effect payloads.
+func jsonSafe(v any) any {
+	if v == nil { return nil }
+	if _, err := json.Marshal(v); err != nil {
+		return fmt.Sprint(v)
+	}
+	return v
 }
 
 // ValidationIssue — SPEC 12.8.
@@ -111,14 +144,26 @@ func (c *FlowContract) Validate() []ValidationIssue {
 			}
 		}
 	}
-	// overlap warning: identical portable conditions (structural compare).
+	// overlap warning: identical portable conditions. O(n) grouping by
+	// (kind, canonical condition JSON); pairwise compare only within
+	// each group (SPEC 12.8).
 	if c.hasPortable {
-		for i := 0; i < len(c.portableRules); i++ {
-			for j := i + 1; j < len(c.portableRules); j++ {
-				if exprEqual(c.portableRules[i].Condition, c.portableRules[j].Condition) &&
-					c.portableRules[i].Kind == c.portableRules[j].Kind {
+		groups := map[string][]int{}
+		for i, pr := range c.portableRules {
+			var condJSON string
+			if pr.Condition != nil {
+				if b, err := json.Marshal(ExprToDict(pr.Condition)); err == nil {
+					condJSON = string(b)
+				}
+			}
+			key := pr.Kind + "\x00" + condJSON
+			groups[key] = append(groups[key], i)
+		}
+		for _, idxs := range groups {
+			for a := 0; a < len(idxs); a++ {
+				for b := a + 1; b < len(idxs); b++ {
 					issues = append(issues, ValidationIssue{"warning", "overlapping_rules",
-						"rules have structurally identical conditions", c.portableRules[j].RuleID})
+						"rules have structurally identical conditions", c.portableRules[idxs[b]].RuleID})
 				}
 			}
 		}

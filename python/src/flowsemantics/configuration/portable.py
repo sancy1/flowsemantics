@@ -25,6 +25,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from flowsemantics._spec import SPEC_VERSION
 from flowsemantics.errors import StructureError
 
 # -- IR hardening limits (SPEC 9.2) ---------------------------------------------
@@ -313,6 +314,14 @@ class PortableFlow:
         """
         if not isinstance(data, dict):
             raise StructureError("portable IR must be a JSON object")
+        sv = data.get("spec_version")
+        if sv is not None and sv != SPEC_VERSION:
+            raise StructureError(
+                f"portable IR spec_version {sv!r} does not match current {SPEC_VERSION!r} (SPEC 9.5)"
+            )
+        port = data.get("portability")
+        if port is not None and port != "PORTABLE":
+            raise StructureError("portable IR portability must be PORTABLE")
         raw_rules = data.get("rules", [])
         if not isinstance(raw_rules, list):
             raise StructureError("portable IR 'rules' must be an array")

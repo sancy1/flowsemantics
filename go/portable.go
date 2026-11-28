@@ -3,6 +3,8 @@ package flowsemantics
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
 )
 
 // SPEC 9.2 limits.
@@ -99,15 +101,15 @@ func EvalExpr(e *PExpr, input any) (any, error) {
 	case "eq":
 		a, err := EvalExpr(e.Args[0], input); if err != nil { return nil, err }
 		b, err := EvalExpr(e.Args[1], input); if err != nil { return nil, err }
-		return a == b, nil
+		return valueEquals(a, b), nil
 	case "ne":
 		a, err := EvalExpr(e.Args[0], input); if err != nil { return nil, err }
 		b, err := EvalExpr(e.Args[1], input); if err != nil { return nil, err }
-		return a != b, nil
+		return !valueEquals(a, b), nil
 	case "lt", "le", "gt", "ge":
 		a, err := EvalExpr(e.Args[0], input); if err != nil { return nil, err }
 		b, err := EvalExpr(e.Args[1], input); if err != nil { return nil, err }
-		return compareNums(e.Op, a, b)
+		return compareVals(e.Op, a, b)
 	case "and":
 		for _, a := range e.Args {
 			v, err := EvalExpr(a, input); if err != nil { return nil, err }
@@ -134,7 +136,7 @@ func EvalExpr(e *PExpr, input any) (any, error) {
 		list, _ := e.Value.([]any)
 		found := false
 		for _, item := range list {
-			if item == v { found = true; break }
+			if valueEquals(item, v) { found = true; break }
 		}
 		if e.Op == "in" { return found, nil }
 		return !found, nil
@@ -142,16 +144,105 @@ func EvalExpr(e *PExpr, input any) (any, error) {
 	return nil, NewStructureError(fmt.Sprintf("unknown op: %s", e.Op))
 }
 
+// truthy implements Python-style truthiness for portable values (SPEC 14.2):
+// false, nil, numeric zero, empty string, and empty list/map are falsy;
+// every other value is truthy. This matches the Python reference
+// bool(eval_expr(...)) semantics across all ports.
 func truthy(v any) bool {
-	b, ok := v.(bool)
-	return ok && b
+	switch t := v.(type) {
+	case nil:
+		return false
+	case bool:
+		return t
+	case string:
+		return t != ""
+	case float64:
+		return t != 0
+	case float32:
+		return t != 0
+	case int:
+		return t != 0
+	case int8:
+		return t != 0
+	case int16:
+		return t != 0
+	case int32:
+		return t != 0
+	case int64:
+		return t != 0
+	case uint:
+		return t != 0
+	case uint8:
+		return t != 0
+	case uint16:
+		return t != 0
+	case uint32:
+		return t != 0
+	case uint64:
+		return t != 0
+	case json.Number:
+		f, err := t.Float64()
+		return err == nil && f != 0
+	case []any:
+		return len(t) > 0
+	case map[string]any:
+		return len(t) > 0
+	}
+	return true
 }
 
-func compareNums(op string, a, b any) (any, error) {
+// valueEquals compares two portable-expression values without panicking on
+// uncomparable dynamic types (maps, slices). Numeric values compare by
+// numeric value so int 1 equals float64 1.0 and json.Number("1"), matching
+// the Python/C# reference semantics.
+func valueEquals(a, b any) bool {
+	// Python parity: True == 1 and False == 0, but True != False.
+	if ab, aok := a.(bool); aok {
+		if bb, bok := b.(bool); bok {
+			return ab == bb
+		}
+		if bf, bok := toFloat(b); bok {
+			if ab { return bf == 1 }
+			return bf == 0
+		}
+		return false
+	}
+	if bb, bok := b.(bool); bok {
+		if af, aok := toFloat(a); aok {
+			if bb { return af == 1 }
+			return af == 0
+		}
+		return false
+	}
+	if af, aok := toFloat(a); aok {
+		if bf, bok := toFloat(b); bok {
+			return af == bf
+		}
+	}
+	return reflect.DeepEqual(a, b)
+}
+
+// compareVals implements Python-style ordering for portable values:
+// two numbers (booleans count as 0/1, matching Python True == 1) compare
+// numerically; two strings compare lexicographically; anything else is a
+// StructureError, mirroring Python's TypeError on mixed operands.
+func compareVals(op string, a, b any) (any, error) {
+	if as, aok := a.(string); aok {
+		if bs, bok := b.(string); bok {
+			c := strings.Compare(as, bs)
+			switch op {
+			case "lt": return c < 0, nil
+			case "le": return c <= 0, nil
+			case "gt": return c > 0, nil
+			case "ge": return c >= 0, nil
+			}
+		}
+		return nil, NewStructureError("comparison requires numbers or two strings")
+	}
 	ai, aok := toFloat(a)
 	bi, bok := toFloat(b)
 	if !aok || !bok {
-		return nil, NewStructureError("comparison requires numbers")
+		return nil, NewStructureError("comparison requires numbers or two strings")
 	}
 	switch op {
 	case "lt": return ai < bi, nil
@@ -165,9 +256,22 @@ func compareNums(op string, a, b any) (any, error) {
 func toFloat(v any) (float64, bool) {
 	switch n := v.(type) {
 	case float64: return n, true
+	case float32: return float64(n), true
 	case int: return float64(n), true
+	case int8: return float64(n), true
+	case int16: return float64(n), true
+	case int32: return float64(n), true
 	case int64: return float64(n), true
+	case uint: return float64(n), true
+	case uint8: return float64(n), true
+	case uint16: return float64(n), true
+	case uint32: return float64(n), true
+	case uint64: return float64(n), true
 	case json.Number: f, err := n.Float64(); return f, err == nil
+	case bool:
+		// Python parity: True == 1, False == 0 in numeric contexts.
+		if n { return 1, true }
+		return 0, true
 	}
 	return 0, false
 }
@@ -256,6 +360,12 @@ func PortableFlowFromDict(data any) (*PortableFlow, error) {
 	d, ok := data.(map[string]any)
 	if !ok {
 		return nil, NewStructureError("portable IR must be an object")
+	}
+	if sv, ok := d["spec_version"].(string); ok && sv != "" && sv != SpecVersion {
+		return nil, NewStructureError(fmt.Sprintf("portable IR spec_version %q does not match current %q (SPEC 9.5)", sv, SpecVersion))
+	}
+	if pv, ok := d["portability"].(string); ok && pv != "" && pv != "PORTABLE" {
+		return nil, NewStructureError("portable IR portability must be PORTABLE")
 	}
 	rawRules, _ := d["rules"].([]any)
 	if len(rawRules) > MaxRules {

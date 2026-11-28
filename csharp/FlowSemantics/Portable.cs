@@ -114,14 +114,24 @@ public static class Portable
 
     private static object Compare(PExpr e, object? input)
     {
-        double a = ToDouble(EvalExpr(e.Args[0], input));
-        double b = ToDouble(EvalExpr(e.Args[1], input));
+        var a = EvalExpr(e.Args[0], input);
+        var b = EvalExpr(e.Args[1], input);
+        // Two strings compare lexicographically (Python parity).
+        if (a is string sa && b is string sb)
+        {
+            var c = string.CompareOrdinal(sa, sb);
+            return e.Op switch
+            {
+                "lt" => c < 0, "le" => c <= 0, "gt" => c > 0, _ => c >= 0,
+            };
+        }
+        double da = ToDouble(a), db = ToDouble(b);
         return e.Op switch
         {
-            "lt" => a < b,
-            "le" => a <= b,
-            "gt" => a > b,
-            _ => a >= b,
+            "lt" => da < db,
+            "le" => da <= db,
+            "gt" => da > db,
+            _ => da >= db,
         };
     }
 
@@ -137,12 +147,39 @@ public static class Portable
         return e.Op == "in" ? found : !found;
     }
 
-    private static bool Truthy(object? v) => v is true;
+    /// Python-style truthiness: false, null, numeric zero, empty string,
+    /// and empty collections are falsy; every other value is truthy.
+    public static bool Truthy(object? v)
+    {
+        switch (v)
+        {
+            case null: return false;
+            case bool b: return b;
+            case string s: return s.Length > 0;
+            case System.Collections.IEnumerable en when v is not string:
+                var it = en.GetEnumerator();
+                try { return it.MoveNext(); } finally { (it as IDisposable)?.Dispose(); }
+        }
+        if (IsNumber(v)) return ToDouble(v) != 0;
+        return true;
+    }
 
-    /// Numeric-aware equality: int 1 equals double 1.0 across IR round-trips.
+    /// Numeric-aware equality: int 1 equals double 1.0 across IR round-trips;
+    /// booleans equal 0/1 like Python (true == 1, true != false).
     private static bool ValueEquals(object? a, object? b)
     {
         if (Equals(a, b)) return true;
+        if (a is bool ab)
+        {
+            if (b is bool bb) return ab == bb;
+            if (b is not null && IsNumber(b)) return (ab ? 1.0 : 0.0) == ToDouble(b);
+            return false;
+        }
+        if (b is bool bb2)
+        {
+            if (a is not null && IsNumber(a)) return ToDouble(a) == (bb2 ? 1.0 : 0.0);
+            return false;
+        }
         if (a is not null && b is not null && IsNumber(a) && IsNumber(b))
             return ToDouble(a) == ToDouble(b);
         return false;
@@ -153,15 +190,25 @@ public static class Portable
 
     private static double ToDouble(object? v) => v switch
     {
-        null => 0,
+        null => throw new StructureError("comparison operand cannot be null"),
+        bool b => b ? 1.0 : 0.0,
         double d => d,
         float f => f,
         int i => i,
         long l => l,
         decimal m => (double)m,
         JsonValue jv when jv.TryGetValue<double>(out var d) => d,
-        _ => Convert.ToDouble(v),
+        _ => ToDoubleStrict(v),
     };
+
+    private static double ToDoubleStrict(object v)
+    {
+        try { return Convert.ToDouble(v); }
+        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException)
+        {
+            throw new StructureError("comparison operand is not numeric: " + v);
+        }
+    }
 
     /// Deserialize a PExpr from its node form with depth tracking (SPEC 9.2).
     public static PExpr ExprFromNode(JsonNode? node, int depth)
@@ -223,6 +270,10 @@ public static class Portable
     public static PortableFlow PortableFlowFromNode(JsonNode? node)
     {
         if (node is not JsonObject d) throw new StructureError("portable IR must be an object");
+        if (d["spec_version"]?.GetValue<string>() is { Length: > 0 } sv && sv != Trust.SpecVersion)
+            throw new StructureError($"portable IR spec_version {sv} does not match current {Trust.SpecVersion} (SPEC 9.5)");
+        if (d["portability"]?.GetValue<string>() is { Length: > 0 } portv && portv != "PORTABLE")
+            throw new StructureError("portable IR portability must be PORTABLE");
         var pf = new PortableFlow
         {
             SpecVersion = d["spec_version"]?.GetValue<string>(),

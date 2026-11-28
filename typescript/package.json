@@ -1,6 +1,6 @@
 {
   "name": "flow-semantics-ts",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "type": "module",
   "license": "Apache-2.0",
   "description": "FlowSemantics TypeScript implementation — conformance target per SPEC 14.5",

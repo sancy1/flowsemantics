@@ -47,6 +47,9 @@ nesting, huge rule counts, duplicate RuleIds, unknown operators.
 - Duplicate `rule_id` values rejected at deserialization, not at
   execution.
 - Unknown expression ops rejected (`OPS` closed set).
+- `spec_version` and `portability` are validated at the deserialization
+  boundary: a mismatched `spec_version` or a non-`PORTABLE` document
+  raises `StructureError` (fail closed, SPEC 9.5).
 - The IR carries no executable code; `kind: "then"` is rejected by
   `Flow.from_ir` (ADR-0003).
 
@@ -101,8 +104,15 @@ fraudulent replay outcome.
 
 - `sign()`/`verify()` provide HMAC-SHA256 integrity over a canonical
   JSON payload; `replay()` verifies when `integrity_key` is supplied.
+  Tag comparison is constant-time (`hmac.compare_digest` in Python,
+  `hmac.Equal` in Go, `timingSafeEqual` in TypeScript,
+  `CryptographicOperations.FixedTimeEquals` in C#, `MessageDigest.isEqual`
+  in Java).
 - Replay fails closed on `spec_version` or `contract_version`
-  mismatch.
+  mismatch. The contract version (algorithm `flowsemantics-contract-v2`)
+  covers portable rule bodies — condition, guard, transform, and
+  effects — so a tampered or stale rule body cannot replay under an
+  unchanged contract version.
 - EFFECTS mode requires explicit `authorize_effects=True` and an
   application-supplied executor — never a default.
 - Unkeyed hashing is not presented as tamper protection; HMAC is the

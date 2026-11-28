@@ -5,6 +5,54 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-28
+
+### Security
+- **Contract version now covers rule bodies** (algorithm
+  `flowsemantics-contract-v2`, all five ports): portable rule
+  condition/guard/transform expressions and effects participate in the
+  SHA-256 contract hash, so a tampered or stale rule body can no longer
+  replay under an unchanged contract version. Effective dates are
+  canonicalized as epoch milliseconds. Replay records signed under v1
+  contract versions fail closed on version mismatch (SPEC 12.6/12.9).
+- **Replay integrity comparison is constant-time** in TypeScript
+  (`timingSafeEqual`), C# (`CryptographicOperations.FixedTimeEquals`),
+  and Java (`MessageDigest.isEqual`); Go already used `hmac.Equal` and
+  Python `hmac.compare_digest`.
+- **Portable IR boundary hardening**: `spec_version` and `portability`
+  are validated at deserialization in all five ports; a mismatched
+  `spec_version` or non-`PORTABLE` document raises `StructureError`
+  (fail closed, SPEC 9.5).
+- **TypeScript portable `field` op** no longer resolves prototype
+  members (`constructor`, `__proto__`); only own properties are
+  accessible.
+
+### Fixed
+- **Go `EvalExpr` panic** on uncomparable dynamic types (maps, slices)
+  in `eq`/`ne`/`in`/`not_in`; equality is now panic-safe and
+  numeric-aware (`1` equals `1.0`).
+- **`Flow.from_ir` fidelity** (Go, TypeScript, C#, Java): guard
+  expressions, priorities, and effective dates are preserved through
+  IR import and evaluated at runtime; `otherwise` fallbacks and
+  `PORTABLE` validation are handled uniformly.
+- **Unified truthiness** across all five ports: Python-style semantics
+  (false, null, numeric zero, empty string/collection are falsy) replace
+  the previous strict-boolean behavior in Go, TypeScript, C#, and Java.
+- **Unified comparison semantics**: two strings compare
+  lexicographically; mixed or non-numeric operands raise a domain
+  error instead of silently coercing (TypeScript cast bug, C#
+  `ToDouble(null) == 0`, Java `Json.num` silent zero).
+- **Boolean/number equality parity** with Python (`true == 1`,
+  `true != false`) in Go, TypeScript, C#, and Java.
+- **O(n) overlap detection** in `validate()` (was O(n²) pairwise) in
+  all five ports.
+
+### Changed
+- `contract_version` algorithm bumped to `flowsemantics-contract-v2`;
+  contract versions computed by previous releases will differ.
+- Maven Central publishing now uses OIDC (`id-token: write`) instead of
+  stored username/password secrets.
+
 ## [Unreleased]
 
 ### Added

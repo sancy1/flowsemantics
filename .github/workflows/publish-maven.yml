@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # OIDC token for Maven Central Portal (no stored credentials)
 
 jobs:
   publish:
@@ -33,26 +34,5 @@ jobs:
           git_user_signingkey: false
           git_commit_gpgsign: false
 
-      - name: Configure Central Portal credentials
-        run: |
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml <<'EOF'
-          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
-            <servers>
-              <server>
-                <id>central</id>
-                <username>${env.CENTRAL_USERNAME}</username>
-                <password>${env.CENTRAL_PASSWORD}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
-        env:
-          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
-          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
-
-      - name: Build, sign checksums, deploy to Central Portal
+      - name: Build, sign checksums, deploy to Central Portal via OIDC
         run: mvn -B deploy
-        env:
-          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
-          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}

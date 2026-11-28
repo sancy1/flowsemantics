@@ -1,0 +1,49 @@
+{
+  "id": "047-ir-effective-from-future",
+  "spec_version": "0.1.0",
+  "spec_section": "14.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "edge",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "r1",
+          "kind": "when",
+          "condition": {
+            "op": "const",
+            "value": true
+          },
+          "transform": {
+            "op": "const",
+            "value": "ok"
+          },
+          "effective_from": "2999-01-01T00:00:00+00:00"
+        }
+      ],
+      "fallback": {
+        "kind": "default_if_no_match",
+        "value": "none"
+      }
+    }
+  },
+  "input": {
+    "fixture": "input.order_50"
+  },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "NO_MATCH",
+    "value": "none",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "effective_from in the future is preserved through from_ir and blocks the rule at the fake clock (SPEC 12.9)."
+}

@@ -1,0 +1,48 @@
+{
+  "id": "040-ir-truthy-nonzero",
+  "spec_version": "0.1.0",
+  "spec_section": "14.2",
+  "pipeline": {
+    "portable_ir": {
+      "spec_version": "0.1.0",
+      "flow_id": "edge",
+      "portability": "PORTABLE",
+      "mode": "FirstMatch",
+      "rules": [
+        {
+          "rule_id": "r1",
+          "kind": "when",
+          "condition": {
+            "op": "field",
+            "value": "total"
+          },
+          "transform": {
+            "op": "const",
+            "value": "ok"
+          }
+        }
+      ],
+      "fallback": {
+        "kind": "default_if_no_match",
+        "value": "none"
+      }
+    }
+  },
+  "input": {
+    "fixture": "input.order_50"
+  },
+  "expected": {
+    "execution_status": "COMPLETED",
+    "decision_status": "APPROVED",
+    "value": "ok",
+    "has_recovery": false,
+    "has_interruption": false,
+    "interruption_kind": null,
+    "has_finalization": false,
+    "is_clean": null,
+    "secondary_exceptions_count": 0,
+    "primary_exception_kind": null,
+    "effects": []
+  },
+  "notes": "Python-style truthiness: a non-zero number condition value is truthy and matches (SPEC 14.2)."
+}

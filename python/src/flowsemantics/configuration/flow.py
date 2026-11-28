@@ -54,6 +54,7 @@ from flowsemantics.configuration.portable import (
     PortableRule,
     _parse_dt,
     eval_expr,
+    expr_to_dict,
 )
 from flowsemantics.configuration.rule import (
     ActionFn,
@@ -567,6 +568,7 @@ class Flow:
                 finally_policy=self._finally_policy,
                 finally_timeout_ms=self._finally_timeout_ms,
                 trace_enabled=self._trace_enabled,
+                portable_rules=self._portable_rules,
             ),
         )
 
@@ -914,9 +916,20 @@ class FlowContract:
                     cond = pr.condition
                     if cond is not None and cond.op == "const" and cond.value is True:
                         unconditional = True
-            for i, a in enumerate(prs):
-                for b in prs[i + 1 :]:
-                    if a.kind == b.kind and a.condition == b.condition:
+            # O(n) overlap detection: group by (kind, canonical condition)
+            # then compare only within each group (SPEC 12.8).
+            groups: dict[tuple[str, str], list] = {}
+            for pr in prs:
+                key = (
+                    pr.kind,
+                    json.dumps(expr_to_dict(pr.condition), sort_keys=True)
+                    if pr.condition is not None
+                    else "null",
+                )
+                groups.setdefault(key, []).append(pr)
+            for members in groups.values():
+                for i, a in enumerate(members):
+                    for b in members[i + 1 :]:
                         issues.append(
                             ValidationIssue(
                                 severity="warning",
@@ -1889,6 +1902,19 @@ class ValidationIssue:
     rule_id: str | None = None
 
 
+def _epoch_ms(dt: datetime.datetime | None) -> int | None:
+    """Canonical epoch-milliseconds representation of a datetime.
+
+    Naive datetimes are interpreted as UTC so the value is identical
+    across hosts with different local timezones (SPEC 12.9, v2).
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    return int(dt.timestamp() * 1000)
+
+
 def _compute_contract_version(
     *,
     rules: list[Rule],
@@ -1899,30 +1925,52 @@ def _compute_contract_version(
     finally_policy: FinallyFailurePolicy,
     finally_timeout_ms: int | None,
     trace_enabled: bool,
+    portable_rules: list[PortableRule] | None = None,
 ) -> str:
     """Structural contract version: SHA-256 of canonical content (SPEC 12.9).
 
-    Algorithm v1: JSON-canonical serialization of rule ids/kinds/
-    priorities, fallback kind, mode, catch kinds, finalizer count,
-    policy, timeout, and trace flag; SHA-256 hex digest truncated to 32
-    chars. Callables are represented by identity-free metadata only.
+    Algorithm v2: JSON-canonical serialization of rule ids/kinds/
+    priorities, effective dates as epoch milliseconds, portable rule
+    bodies (condition/guard/transform expressions and effects),
+    fallback kind, mode, catch kinds, finalizer count, policy, timeout,
+    and trace flag; SHA-256 hex digest truncated to 32 chars. Native
+    (callable) rule bodies are not serializable and are marked
+    ``native: true``; their metadata still participates in the hash.
     """
+    prs = portable_rules or []
+    rule_entries = []
+    for i, r in enumerate(rules):
+        pr = prs[i] if i < len(prs) else None
+        entry: dict[str, Any] = {
+            "id": str(r.id),
+            "kind": r.kind,
+            "priority": r.priority,
+            "effective_from": _epoch_ms(r.effective_from),
+            "effective_until": _epoch_ms(r.effective_until),
+            "native": pr is None,
+            "condition": (
+                expr_to_dict(pr.condition)
+                if pr is not None and pr.condition is not None
+                else None
+            ),
+            "guard": (
+                expr_to_dict(pr.guard)
+                if pr is not None and pr.guard is not None
+                else None
+            ),
+            "transform": (
+                expr_to_dict(pr.transform)
+                if pr is not None and pr.transform is not None
+                else None
+            ),
+            "effects": [
+                {"name": e.name, "payload": e.payload} for e in r.effects
+            ],
+        }
+        rule_entries.append(entry)
     payload = {
-        "algorithm": "flowsemantics-contract-v1",
-        "rules": [
-            {
-                "id": str(r.id),
-                "kind": r.kind,
-                "priority": r.priority,
-                "effective_from": (
-                    r.effective_from.isoformat() if r.effective_from is not None else None
-                ),
-                "effective_until": (
-                    r.effective_until.isoformat() if r.effective_until is not None else None
-                ),
-            }
-            for r in rules
-        ],
+        "algorithm": "flowsemantics-contract-v2",
+        "rules": rule_entries,
         "fallback": None if fallback is None else fallback.kind,
         "mode": str(mode),
         "catches": [c.kind for c in catches],
@@ -1931,7 +1979,9 @@ def _compute_contract_version(
         "finally_timeout_ms": finally_timeout_ms,
         "trace_enabled": trace_enabled,
     }
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), default=str
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
 
 

@@ -10,7 +10,7 @@ import {
   StructureError,
 } from "./errors.ts";
 import { contractVersionOf } from "./trust.ts";
-import { evalExpr, portableFlowFromDict, type PortableFlow } from "./portable.ts";
+import { evalExpr, exprToDict, portableFlowFromDict, truthy, type PortableFlow } from "./portable.ts";
 import {
   DecisionStatus,
   EvaluationMode,
@@ -194,24 +194,30 @@ export class Flow {
   // -- portable IR (SPEC 14.2) -------------------------------------------------
 
   /** Register a portable when rule (SPEC 14.2). */
-  whenExpr(cond: import("./portable.ts").PExpr, transform: import("./portable.ts").PExpr, opts: { id?: string; effects?: Effect[] } = {}): this {
+  whenExpr(cond: import("./portable.ts").PExpr, transform: import("./portable.ts").PExpr, opts: { id?: string; effects?: Effect[]; guard?: import("./portable.ts").PExpr | undefined; priority?: number; effectiveFrom?: string | null; effectiveUntil?: string | null } = {}): this {
     const id = opts.id ?? `p${this.portableRules?.length ?? 0}`;
     this.portableRules ??= [];
     this.portableRules.push({
       rule_id: id, kind: "when",
-      condition: cond, transform,
-      priority: 0, effects: (opts.effects ?? []).map((e) => ({ name: e.name, payload: e.payload })),
+      condition: cond, guard: opts.guard, transform,
+      priority: opts.priority ?? 0,
+      effective_from: opts.effectiveFrom ?? null,
+      effective_until: opts.effectiveUntil ?? null,
+      effects: (opts.effects ?? []).map((e) => ({ name: e.name, payload: e.payload })),
     });
     return this;
   }
   /** Register a portable when_not rule (SPEC 14.2). */
-  whenNotExpr(cond: import("./portable.ts").PExpr, transform: import("./portable.ts").PExpr, opts: { id?: string; effects?: Effect[] } = {}): this {
+  whenNotExpr(cond: import("./portable.ts").PExpr, transform: import("./portable.ts").PExpr, opts: { id?: string; effects?: Effect[]; guard?: import("./portable.ts").PExpr | undefined; priority?: number; effectiveFrom?: string | null; effectiveUntil?: string | null } = {}): this {
     const id = opts.id ?? `p${this.portableRules?.length ?? 0}`;
     this.portableRules ??= [];
     this.portableRules.push({
       rule_id: id, kind: "when_not",
-      condition: cond, transform,
-      priority: 0, effects: (opts.effects ?? []).map((e) => ({ name: e.name, payload: e.payload })),
+      condition: cond, guard: opts.guard, transform,
+      priority: opts.priority ?? 0,
+      effective_from: opts.effectiveFrom ?? null,
+      effective_until: opts.effectiveUntil ?? null,
+      effects: (opts.effects ?? []).map((e) => ({ name: e.name, payload: e.payload })),
     });
     return this;
   }
@@ -219,20 +225,36 @@ export class Flow {
   /** Build a Flow from a Portable IR document (SPEC 14.2). */
   static fromIr(ir: unknown): Flow {
     const pf = portableFlowFromDict(ir);
+    if (pf.portability !== "PORTABLE") {
+      throw new StructureError("IR portability must be PORTABLE");
+    }
     const flow = new Flow().withMode(pf.mode as EvaluationMode);
     flow.portableIr = pf;
     for (const r of pf.rules) {
-      const cond = r.condition!;
-      const tr = r.transform!;
+      if (!r.condition || !r.transform) {
+        throw new StructureError(`portable rule ${r.rule_id} requires condition+transform`);
+      }
+      const cond = r.condition;
+      const tr = r.transform;
       const effects = r.effects.map((e) => ({ name: e.name, payload: e.payload }));
+      const opts = {
+        id: r.rule_id, effects,
+        guard: r.guard, priority: r.priority,
+        effectiveFrom: r.effective_from ?? null,
+        effectiveUntil: r.effective_until ?? null,
+      };
       if (r.kind === "when") {
-        flow.whenExpr(cond, tr, { id: r.rule_id, effects });
+        flow.whenExpr(cond, tr, opts);
       } else {
-        flow.whenNotExpr(cond, tr, { id: r.rule_id, effects });
+        flow.whenNotExpr(cond, tr, opts);
       }
     }
     if (pf.fallback?.kind === "default_if_no_match") {
       flow.defaultIfNoMatch(pf.fallback.value);
+    } else if (pf.fallback?.kind === "otherwise") {
+      flow.otherwise(() => pf.fallback!.value);
+    } else if (pf.fallback != null) {
+      throw new StructureError(`unsupported portable fallback kind: ${pf.fallback.kind}`);
     }
     return flow;
   }
@@ -254,8 +276,8 @@ export class Flow {
         return {
           id: pr.rule_id,
           kind: pr.kind,
-          condition: (inp: unknown) => Boolean(evalExpr(cond, inp)),
-          guard: pr.guard ? (inp: unknown) => Boolean(evalExpr(pr.guard!, inp)) : null,
+          condition: (inp: unknown) => truthy(evalExpr(cond, inp)),
+          guard: pr.guard ? (inp: unknown) => truthy(evalExpr(pr.guard!, inp)) : null,
           action: (_inp: unknown, prev?: unknown) => evalExpr(tr, prev !== undefined ? { input: _inp, prev } : _inp),
           priority: pr.priority,
           effects: pr.effects.map((e) => ({ name: e.name, payload: e.payload })),
@@ -863,13 +885,22 @@ export class FlowContract {
         if (pc && pc.op === "const" && pc.value === true) unconditional = true;
       }
     }
-    // overlap: identical portable conditions
+    // overlap: identical portable conditions. O(n) grouping by
+    // (kind, canonical condition JSON); pairwise compare only within
+    // each group (SPEC 12.8).
     if (this.spec.portableRules) {
       const prs = this.spec.portableRules;
-      for (let i = 0; i < prs.length; i++) {
-        for (let j = i + 1; j < prs.length; j++) {
-          if (prs[i]!.kind === prs[j]!.kind && exprEqual(prs[i]!.condition, prs[j]!.condition)) {
-            issues.push({ severity: "warning", code: "overlapping_rules", message: "rules have structurally identical conditions", rule_id: prs[j]!.rule_id });
+      const groups = new Map<string, number[]>();
+      prs.forEach((pr, i) => {
+        const key = pr.kind + "\u0000" + (pr.condition ? JSON.stringify(exprToDict(pr.condition)) : "null");
+        const arr = groups.get(key) ?? [];
+        arr.push(i);
+        groups.set(key, arr);
+      });
+      for (const idxs of groups.values()) {
+        for (let a = 0; a < idxs.length; a++) {
+          for (let b = a + 1; b < idxs.length; b++) {
+            issues.push({ severity: "warning", code: "overlapping_rules", message: "rules have structurally identical conditions", rule_id: prs[idxs[b]!]!.rule_id });
           }
         }
       }

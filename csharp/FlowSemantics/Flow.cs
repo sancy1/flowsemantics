@@ -170,19 +170,33 @@ public sealed class Flow
     public Flow DefaultValue(object? value) => DefaultIfNoMatch(value);
 
     /// Register a portable when rule (SPEC 14.2).
-    public Flow WhenExpr(Portable.PExpr cond, Portable.PExpr transform, string id, List<Effect>? effects = null)
+    public Flow WhenExpr(Portable.PExpr cond, Portable.PExpr transform, string id,
+        List<Effect>? effects = null, Portable.PExpr? guard = null, int priority = 0,
+        string? effectiveFrom = null, string? effectiveUntil = null)
     {
         _hasPortable = true;
-        var pr = new Portable.PortableRule { RuleId = id, Kind = "when", Condition = cond, Transform = transform };
+        var pr = new Portable.PortableRule
+        {
+            RuleId = id, Kind = "when", Condition = cond, Transform = transform,
+            Guard = guard, Priority = priority,
+            EffectiveFrom = effectiveFrom, EffectiveUntil = effectiveUntil,
+        };
         if (effects is not null) pr.Effects.AddRange(effects);
         _portableRules.Add(pr); return this;
     }
 
     /// Register a portable when_not rule (SPEC 14.2).
-    public Flow WhenNotExpr(Portable.PExpr cond, Portable.PExpr transform, string id, List<Effect>? effects = null)
+    public Flow WhenNotExpr(Portable.PExpr cond, Portable.PExpr transform, string id,
+        List<Effect>? effects = null, Portable.PExpr? guard = null, int priority = 0,
+        string? effectiveFrom = null, string? effectiveUntil = null)
     {
         _hasPortable = true;
-        var pr = new Portable.PortableRule { RuleId = id, Kind = "when_not", Condition = cond, Transform = transform };
+        var pr = new Portable.PortableRule
+        {
+            RuleId = id, Kind = "when_not", Condition = cond, Transform = transform,
+            Guard = guard, Priority = priority,
+            EffectiveFrom = effectiveFrom, EffectiveUntil = effectiveUntil,
+        };
         if (effects is not null) pr.Effects.AddRange(effects);
         _portableRules.Add(pr); return this;
     }
@@ -191,15 +205,32 @@ public sealed class Flow
     public static Flow FromIr(JsonNode ir)
     {
         var pf = Portable.PortableFlowFromNode(ir);
+        if (pf.Portability != "PORTABLE")
+            throw new StructureError("IR portability must be PORTABLE");
         var f = Create().WithMode(pf.Mode);
         f._hasPortable = true;
         foreach (var pr in pf.Rules)
         {
-            if (pr.Kind == "when") f.WhenExpr(pr.Condition!, pr.Transform!, pr.RuleId, pr.Effects.Count > 0 ? pr.Effects : null);
-            else f.WhenNotExpr(pr.Condition!, pr.Transform!, pr.RuleId, pr.Effects.Count > 0 ? pr.Effects : null);
+            if (pr.Condition is null || pr.Transform is null)
+                throw new StructureError($"portable rule {pr.RuleId} requires condition+transform");
+            var effects = pr.Effects.Count > 0 ? pr.Effects : null;
+            if (pr.Kind == "when")
+                f.WhenExpr(pr.Condition, pr.Transform, pr.RuleId, effects,
+                    pr.Guard, pr.Priority, pr.EffectiveFrom, pr.EffectiveUntil);
+            else
+                f.WhenNotExpr(pr.Condition, pr.Transform, pr.RuleId, effects,
+                    pr.Guard, pr.Priority, pr.EffectiveFrom, pr.EffectiveUntil);
         }
-        if (pf.Fallback is not null && pf.Fallback["kind"]?.GetValue<string>() == "default_if_no_match")
-            f.DefaultIfNoMatch(Portable.ToClr(pf.Fallback["value"]));
+        if (pf.Fallback is not null)
+        {
+            var kind = pf.Fallback["kind"]?.GetValue<string>();
+            if (kind == "default_if_no_match")
+                f.DefaultIfNoMatch(Portable.ToClr(pf.Fallback["value"]));
+            else if (kind == "otherwise")
+                f.Otherwise((input, prev) => Portable.ToClr(pf.Fallback["value"]));
+            else
+                throw new StructureError($"unsupported portable fallback kind: {kind}");
+        }
         return f;
     }
 
@@ -225,7 +256,10 @@ public sealed class Flow
                 var r = new Rule
                 {
                     Id = pr.RuleId, Kind = pr.Kind, Priority = pr.Priority,
-                    Condition = input => Portable.EvalExpr(cond, input) is true,
+                    Condition = input => Portable.Truthy(Portable.EvalExpr(cond, input)),
+                    Guard = pr.Guard is not null
+                        ? (GuardFn)(input => Portable.Truthy(Portable.EvalExpr(pr.Guard, input)))
+                        : null,
                     Action = (input, prev) => Portable.EvalExpr(tr, input),
                     EffectiveFrom = Advanced.ParseEffective(pr.EffectiveFrom),
                     EffectiveUntil = Advanced.ParseEffective(pr.EffectiveUntil),
@@ -255,7 +289,8 @@ public sealed class Flow
             FlowId = _flowId, DiagnosticHook = _diagnosticHook,
         };
         contract.ContractVersion = Trust.ContractVersion(compiled, _fallback, _mode,
-            new List<CatchRule>(_catches), _finalizers.Count, _finallyPolicy, _finallyTimeoutMs, _traceEnabled);
+            new List<CatchRule>(_catches), _finalizers.Count, _finallyPolicy, _finallyTimeoutMs, _traceEnabled,
+            _portableRules);
         contract.HasPortable = _hasPortable;
         contract.PortableRules = new List<Portable.PortableRule>(_portableRules);
         return contract;

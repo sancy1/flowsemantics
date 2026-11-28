@@ -208,31 +208,50 @@ func WithPRuleID(id string) PortableRuleOpt { return func(r *PortableRule) { r.R
 func WithPEffects(effects []Effect) PortableRuleOpt { return func(r *PortableRule) { r.Effects = effects } }
 // WithPPriority sets the evaluation priority for a portable rule.
 func WithPPriority(p int) PortableRuleOpt { return func(r *PortableRule) { r.Priority = p } }
+// WithPGuard sets the guard expression for a portable rule.
+func WithPGuard(g *PExpr) PortableRuleOpt { return func(r *PortableRule) { r.Guard = g } }
+// WithPEffectiveFrom sets the effective-from ISO timestamp for a portable rule.
+func WithPEffectiveFrom(s string) PortableRuleOpt { return func(r *PortableRule) { r.EffectiveFrom = &s } }
+// WithPEffectiveUntil sets the effective-until ISO timestamp for a portable rule.
+func WithPEffectiveUntil(s string) PortableRuleOpt { return func(r *PortableRule) { r.EffectiveUntil = &s } }
 
 // FlowFromIR builds a Flow from a Portable IR document (SPEC 14.2).
 func FlowFromIR(ir any) (*Flow, error) {
 	pf, err := PortableFlowFromDict(ir)
 	if err != nil { return nil, err }
+	if pf.Portability != "PORTABLE" {
+		return nil, NewStructureError("IR portability must be PORTABLE")
+	}
 	f := NewFlow().WithMode(pf.Mode)
 	f.portableFlow = pf
 	f.hasPortable = true
 	for _, pr := range pf.Rules {
-		cond := pr.Condition
-		tr := pr.Transform
-		if pr.Kind == "when" {
-			f.WhenExpr(cond, tr)
-		} else {
-			f.WhenNotExpr(cond, tr)
+		if pr.Condition == nil || pr.Transform == nil {
+			return nil, NewStructureError("portable rule requires condition+transform")
 		}
-		// copy id/effects onto last portable rule
+		if pr.Kind == "when" {
+			f.WhenExpr(pr.Condition, pr.Transform)
+		} else {
+			f.WhenNotExpr(pr.Condition, pr.Transform)
+		}
+		// copy id/effects/guard/effective dates onto last portable rule
 		last := &f.portableRules[len(f.portableRules)-1]
 		last.RuleID = pr.RuleID
 		last.Priority = pr.Priority
 		last.Effects = pr.Effects
+		last.Guard = pr.Guard
+		last.EffectiveFrom = pr.EffectiveFrom
+		last.EffectiveUntil = pr.EffectiveUntil
 	}
 	if pf.Fallback != nil {
 		if pf.Fallback["kind"] == "default_if_no_match" {
 			f.DefaultIfNoMatch(pf.Fallback["value"])
+		} else if pf.Fallback["kind"] == "otherwise" {
+			if v, ok := pf.Fallback["value"]; ok {
+				f.DefaultIfNoMatch(v)
+			}
+		} else {
+			return nil, NewStructureError(fmt.Sprintf("unsupported portable fallback kind: %v", pf.Fallback["kind"]))
 		}
 	}
 	return f, nil
@@ -291,12 +310,21 @@ func (f *Flow) Compile() (*FlowContract, error) {
 		for _, pr := range f.portableRules {
 			cond := pr.Condition
 			tr := pr.Transform
+			var guard GuardFn
+			if pr.Guard != nil {
+				g := pr.Guard
+				guard = func(input any) (bool, error) {
+					v, err := EvalExpr(g, input)
+					return truthy(v), err
+				}
+			}
 			rules = append(rules, Rule{
 				ID: pr.RuleID, Kind: pr.Kind,
 				Condition: func(input any) (bool, error) {
 					v, err := EvalExpr(cond, input)
 					return truthy(v), err
 				},
+				Guard: guard,
 				Action: func(input any, prev any) (any, error) {
 					return EvalExpr(tr, input)
 				},
@@ -326,7 +354,8 @@ func (f *Flow) Compile() (*FlowContract, error) {
 	}
 	cv := ContractVersion(rules, f.fallback, f.mode,
 		append([]CatchRule(nil), f.catches...), len(f.finalizers),
-		f.finallyPolicy, f.finallyTimeout, f.traceEnabled)
+		f.finallyPolicy, f.finallyTimeout, f.traceEnabled,
+		f.portableRules)
 	clk := f.clock
 	if clk == nil { clk = SystemClock{} }
 	return &FlowContract{

@@ -148,17 +148,33 @@ public final class Flow {
 
     /** Register a portable when rule (SPEC 14.2). */
     public Flow whenExpr(Portable.PExpr cond, Portable.PExpr transform, String id, List<Outcome.Effect> effects) {
+        return whenExpr(cond, transform, id, effects, null, 0, null, null);
+    }
+    /** Register a portable when rule (SPEC 14.2). */
+    public Flow whenExpr(Portable.PExpr cond, Portable.PExpr transform, String id,
+            List<Outcome.Effect> effects, Portable.PExpr guard, int priority,
+            String effectiveFrom, String effectiveUntil) {
         hasPortable = true;
         Portable.PortableRule pr = new Portable.PortableRule();
         pr.ruleId = id; pr.kind = "when"; pr.condition = cond; pr.transform = transform;
+        pr.guard = guard; pr.priority = priority;
+        pr.effectiveFrom = effectiveFrom; pr.effectiveUntil = effectiveUntil;
         if (effects != null) pr.effects = effects;
         portableRules.add(pr); return this;
     }
     /** Register a portable when_not rule (SPEC 14.2). */
     public Flow whenNotExpr(Portable.PExpr cond, Portable.PExpr transform, String id, List<Outcome.Effect> effects) {
+        return whenNotExpr(cond, transform, id, effects, null, 0, null, null);
+    }
+    /** Register a portable when_not rule (SPEC 14.2). */
+    public Flow whenNotExpr(Portable.PExpr cond, Portable.PExpr transform, String id,
+            List<Outcome.Effect> effects, Portable.PExpr guard, int priority,
+            String effectiveFrom, String effectiveUntil) {
         hasPortable = true;
         Portable.PortableRule pr = new Portable.PortableRule();
         pr.ruleId = id; pr.kind = "when_not"; pr.condition = cond; pr.transform = transform;
+        pr.guard = guard; pr.priority = priority;
+        pr.effectiveFrom = effectiveFrom; pr.effectiveUntil = effectiveUntil;
         if (effects != null) pr.effects = effects;
         portableRules.add(pr); return this;
     }
@@ -166,14 +182,32 @@ public final class Flow {
     /** Build a Flow from a Portable IR document (SPEC 14.2). */
     public static Flow fromIr(Object ir) {
         Portable.PortableFlow pf = Portable.portableFlowFromDict(ir);
+        if (!"PORTABLE".equals(pf.portability)) {
+            throw new FlowErrors.StructureError("IR portability must be PORTABLE");
+        }
         Flow f = create().withMode(pf.mode);
         f.hasPortable = true;
         for (Portable.PortableRule pr : pf.rules) {
-            if ("when".equals(pr.kind)) f.whenExpr(pr.condition, pr.transform, pr.ruleId, pr.effects);
-            else f.whenNotExpr(pr.condition, pr.transform, pr.ruleId, pr.effects);
+            if (pr.condition == null || pr.transform == null) {
+                throw new FlowErrors.StructureError("portable rule " + pr.ruleId + " requires condition+transform");
+            }
+            if ("when".equals(pr.kind))
+                f.whenExpr(pr.condition, pr.transform, pr.ruleId, pr.effects,
+                    pr.guard, pr.priority, pr.effectiveFrom, pr.effectiveUntil);
+            else
+                f.whenNotExpr(pr.condition, pr.transform, pr.ruleId, pr.effects,
+                    pr.guard, pr.priority, pr.effectiveFrom, pr.effectiveUntil);
         }
-        if (pf.fallback != null && "default_if_no_match".equals(pf.fallback.get("kind"))) {
-            f.defaultIfNoMatch(pf.fallback.get("value"));
+        if (pf.fallback != null) {
+            Object kind = pf.fallback.get("kind");
+            if ("default_if_no_match".equals(kind)) {
+                f.defaultIfNoMatch(pf.fallback.get("value"));
+            } else if ("otherwise".equals(kind)) {
+                Object v = pf.fallback.get("value");
+                f.otherwise((input, prev) -> v);
+            } else {
+                throw new FlowErrors.StructureError("unsupported portable fallback kind: " + kind);
+            }
         }
         return f;
     }
@@ -196,8 +230,9 @@ public final class Flow {
                 r.id = pr.ruleId; r.kind = pr.kind; r.priority = pr.priority; r.effects = pr.effects;
                 r.effectiveFrom = Advanced.parseEffective(pr.effectiveFrom);
                 r.effectiveUntil = Advanced.parseEffective(pr.effectiveUntil);
-                Portable.PExpr cond = pr.condition, tr = pr.transform;
+                Portable.PExpr cond = pr.condition, tr = pr.transform, gd = pr.guard;
                 r.condition = input -> truthy(Portable.evalExpr(cond, input));
+                if (gd != null) r.guard = input -> truthy(Portable.evalExpr(gd, input));
                 r.action = (input, prev) -> Portable.evalExpr(tr, input);
                 compiled.add(r);
             }
@@ -219,7 +254,8 @@ public final class Flow {
             }
         }
         c.contractVersion = Trust.contractVersion(compiled, fallback, mode,
-            new ArrayList<>(catches), finalizers.size(), finallyPolicy, finallyTimeoutMs, traceEnabled);
+            new ArrayList<>(catches), finalizers.size(), finallyPolicy, finallyTimeoutMs, traceEnabled,
+            portableRules);
         // duplicate RuleId validation (SPEC 4.3)
         java.util.Set<String> seenIds = new java.util.HashSet<>();
         for (Rule r : compiled) {
@@ -232,7 +268,7 @@ public final class Flow {
         return c;
     }
 
-    private static boolean truthy(Object v) { return Boolean.TRUE.equals(v); }
+    private static boolean truthy(Object v) { return Portable.truthy(v); }
 
     /** A compiled, immutable flow contract (SPEC 4.1, 10.9). */
     public static final class FlowContract {

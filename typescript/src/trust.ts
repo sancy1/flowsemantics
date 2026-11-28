@@ -1,6 +1,7 @@
 // Trust layer — SPEC.md 12.5-12.8, 9.5. Parity with python trust/.
 
-import { createHmac } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { exprToDict } from "./portable.ts";
 import type { FlowContract } from "./flow.ts";
 import type { ExecutionTrace, FlowOutcome } from "./types.ts";
 import type { Clock } from "./clock.ts";
@@ -41,26 +42,73 @@ export interface ReplayResult {
   effects_applied: number;
 }
 
-// FNV-1a 64-bit-ish hash → hex. Structural contract version, algorithm v1.
-/** Compute the structural contract version (SPEC 12.9). */
-export function contractVersionOf(contract: FlowContract): string {
-  const summary = JSON.stringify({
-    mode: (contract as unknown as { spec: { mode: string } }).spec.mode,
-    rules: (contract as unknown as { spec: { rules: { id: string; kind: string; priority: number }[] } }).spec.rules
-      .map((r) => [r.id, r.kind, r.priority]),
-  });
-  let h1 = 0x811c9dc5, h2 = 0x01000193;
-  for (let i = 0; i < summary.length; i++) {
-    const c = summary.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
-    h2 = Math.imul(h2 + c, 0x85ebca6b) >>> 0;
+/** Deterministic JSON serialization with recursively sorted object keys,
+ *  matching Python json.dumps(sort_keys=True, separators=(",", ":")). */
+function canonicalJson(value: unknown): string {
+  if (value === null || value === undefined) return "null";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return "null";
+    return JSON.stringify(value);
   }
-  return `v1-${h1.toString(16).padStart(8, "0")}${h2.toString(16).padStart(8, "0")}`;
+  if (typeof value === "string" || typeof value === "boolean") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (typeof value === "object") {
+    const keys = Object.keys(value as Record<string, unknown>).sort();
+    const parts = keys.map((k) => `${JSON.stringify(k)}:${canonicalJson((value as Record<string, unknown>)[k])}`);
+    return `{${parts.join(",")}}`;
+  }
+  return JSON.stringify(String(value));
+}
+
+/** Compute the structural contract version (SPEC 12.9, algorithm v2):
+ *  SHA-256 of canonical JSON covering portable rule bodies
+ *  (condition/guard/transform/effects), truncated to 32 hex chars.
+ *  Identical payload shape to the Python/Go/C#/Java references. */
+export function contractVersionOf(contract: FlowContract): string {
+  const spec = (contract as unknown as { spec: {
+    rules: { id: string; kind: string; priority: number;
+      effective_from?: number | null; effective_until?: number | null;
+      effects?: { name: string; payload?: unknown }[] }[];
+    mode: string; fallback: { kind: string } | null;
+    catches: { kind: string }[]; finalizers: unknown[];
+    finallyPolicy: string; finallyTimeoutMs: number | null;
+    traceEnabled: boolean;
+    portableRules?: { condition?: unknown; guard?: unknown; transform?: unknown }[] | null;
+  } }).spec;
+  const prs = spec.portableRules ?? [];
+  const rules = spec.rules.map((r, i) => {
+    const pr = i < prs.length ? prs[i] : undefined;
+    return {
+      id: r.id,
+      kind: r.kind,
+      priority: r.priority,
+      effective_from: r.effective_from ?? null,
+      effective_until: r.effective_until ?? null,
+      native: pr === undefined,
+      condition: pr?.condition ? exprToDict(pr.condition as never) : null,
+      guard: pr?.guard ? exprToDict(pr.guard as never) : null,
+      transform: pr?.transform ? exprToDict(pr.transform as never) : null,
+      effects: (r.effects ?? []).map((e) => ({ name: e.name, payload: e.payload ?? null })),
+    };
+  });
+  const payload = {
+    algorithm: "flowsemantics-contract-v2",
+    rules,
+    fallback: spec.fallback ? spec.fallback.kind : null,
+    mode: spec.mode,
+    catches: spec.catches.map((c) => c.kind),
+    finalizer_count: spec.finalizers.length,
+    finally_policy: spec.finallyPolicy,
+    finally_timeout_ms: spec.finallyTimeoutMs,
+    trace_enabled: spec.traceEnabled,
+  };
+  const digest = createHash("sha256").update(canonicalJson(payload), "utf8").digest("hex");
+  return digest.slice(0, 32);
 }
 
 function canonicalPayload(rec: ReplayRecord): string {
   const o = rec.outcome;
-  return JSON.stringify({
+  return canonicalJson({
     spec_version: rec.spec_version,
     contract_version: rec.contract_version,
     input: rec.input,
@@ -73,7 +121,7 @@ function canonicalPayload(rec: ReplayRecord): string {
       has_recovery: o.recovery !== null,
       interruption_kind: o.interruption?.kind ?? null,
     },
-    effects: rec.effects.map((e) => JSON.stringify(e)),
+    effects: rec.effects,
   });
 }
 
@@ -103,8 +151,11 @@ export function record(contract: FlowContract, input: unknown, opts: { clock?: C
 function verifyIntegrity(rec: ReplayRecord, key: string | Buffer | null): void {
   if (rec.integrity === null) return;
   if (key === null) throw new ReplayError("record is integrity-tagged but no key supplied");
-  const expected = createHmac("sha256", key).update(canonicalPayload(rec), "utf8").digest("hex");
-  if (expected !== rec.integrity) throw new ReplayError("replay record integrity check failed");
+  const expected = createHmac("sha256", key).update(canonicalPayload(rec), "utf8").digest();
+  const actual = Buffer.from(rec.integrity, "hex");
+  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
+    throw new ReplayError("replay record integrity check failed");
+  }
 }
 
 function checkVersions(rec: ReplayRecord, contract: FlowContract): void {

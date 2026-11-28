@@ -8,6 +8,8 @@ export const MAX_EXPR_DEPTH = 100;
 export const MAX_IR_BYTES = 1_000_000;
 /** Maximum rule count in portable IR (SPEC 9.2). */
 export const MAX_RULES = 10_000;
+/** SPEC version this implementation conforms to (SPEC 9.5). */
+const SPEC_VERSION_TS = "0.1.0";
 
 /** A node in the portable expression subset (SPEC 14.2). */
 export interface PExpr {
@@ -77,34 +79,114 @@ export function evalExpr(expr: PExpr, input: unknown): unknown {
   switch (expr.op) {
     case "const": return expr.value;
     case "field": {
-      if (typeof input !== "object" || input === null) {
+      if (typeof input !== "object" || input === null || Array.isArray(input)) {
         throw new StructureError("field access requires a mapping input");
       }
-      return (input as Record<string, unknown>)[expr.value as string];
+      const name = expr.value as string;
+      // Own-property guard: never resolve prototype members such as
+      // "constructor" or "__proto__" through portable field access.
+      if (!Object.prototype.hasOwnProperty.call(input, name)) return undefined;
+      return (input as Record<string, unknown>)[name];
     }
-    case "eq": return evalExpr(expr.args![0]!, input) === evalExpr(expr.args![1]!, input);
-    case "ne": return evalExpr(expr.args![0]!, input) !== evalExpr(expr.args![1]!, input);
-    case "lt": return (evalExpr(expr.args![0]!, input) as number) < (evalExpr(expr.args![1]!, input) as number);
-    case "le": return (evalExpr(expr.args![0]!, input) as number) <= (evalExpr(expr.args![1]!, input) as number);
-    case "gt": return (evalExpr(expr.args![0]!, input) as number) > (evalExpr(expr.args![1]!, input) as number);
-    case "ge": return (evalExpr(expr.args![0]!, input) as number) >= (evalExpr(expr.args![1]!, input) as number);
-    case "and": return expr.args!.every((a) => Boolean(evalExpr(a, input)));
-    case "or": return expr.args!.some((a) => Boolean(evalExpr(a, input)));
-    case "not": return !evalExpr(expr.args![0]!, input);
+    case "eq": return valueEquals(evalExpr(expr.args![0]!, input), evalExpr(expr.args![1]!, input));
+    case "ne": return !valueEquals(evalExpr(expr.args![0]!, input), evalExpr(expr.args![1]!, input));
+    case "lt": case "le": case "gt": case "ge": {
+      const a = evalExpr(expr.args![0]!, input);
+      const b = evalExpr(expr.args![1]!, input);
+      return compareVals(expr.op, a, b);
+    }
+    case "and": return expr.args!.every((a) => truthy(evalExpr(a, input)));
+    case "or": return expr.args!.some((a) => truthy(evalExpr(a, input)));
+    case "not": return !truthy(evalExpr(expr.args![0]!, input));
     case "is_null": return evalExpr(expr.args![0]!, input) === null || evalExpr(expr.args![0]!, input) === undefined;
     case "is_not_null": { const v = evalExpr(expr.args![0]!, input); return v !== null && v !== undefined; }
     case "in": {
       const v = evalExpr(expr.args![0]!, input);
       const list = expr.value as unknown[];
-      return list.includes(v);
+      return list.some((item) => valueEquals(item, v));
     }
     case "not_in": {
       const v = evalExpr(expr.args![0]!, input);
       const list = expr.value as unknown[];
-      return !list.includes(v);
+      return !list.some((item) => valueEquals(item, v));
     }
     default: throw new StructureError(`unknown portable expression op: ${expr.op}`);
   }
+}
+
+/** Python-style truthiness for portable values (SPEC 14.2): false, null,
+ *  undefined, numeric zero, empty string, empty array, and empty plain
+ *  object are falsy; every other value is truthy. */
+export function truthy(v: unknown): boolean {
+  if (v === null || v === undefined) return false;
+  switch (typeof v) {
+    case "boolean": return v;
+    case "number": return v !== 0; // NaN !== 0 → truthy, matching Python float('nan')
+    case "string": return v.length > 0;
+    case "object":
+      if (Array.isArray(v)) return v.length > 0;
+      if (v instanceof Date) return true;
+      return Object.keys(v as Record<string, unknown>).length > 0;
+    default: return true;
+  }
+}
+
+/** Numeric-aware, deep equality for portable values. Numbers compare by
+ *  value (1 === 1.0), booleans equal 0/1 like Python (true == 1), and
+ *  arrays/plain objects compare structurally. */
+export function valueEquals(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a === "boolean" || typeof b === "boolean") {
+    const an = typeof a === "boolean" ? (a ? 1 : 0) : typeof a === "number" ? a : null;
+    const bn = typeof b === "boolean" ? (b ? 1 : 0) : typeof b === "number" ? b : null;
+    if (an !== null && bn !== null) return an === bn;
+    return false;
+  }
+  if (typeof a === "number" && typeof b === "number") return a === b;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((x, i) => valueEquals(x, b[i]));
+  }
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const ka = Object.keys(a), kb = Object.keys(b);
+    return ka.length === kb.length && ka.every((k) =>
+      Object.prototype.hasOwnProperty.call(b, k) && valueEquals(a[k], b[k]));
+  }
+  return false;
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v) && !(v instanceof Date);
+}
+
+function toNum(v: unknown): number | null {
+  if (typeof v === "number") return v;
+  if (typeof v === "boolean") return v ? 1 : 0;
+  return null;
+}
+
+/** Python-style ordering: two numbers (booleans count as 0/1) compare
+ *  numerically; two strings compare lexicographically; anything else is a
+ *  StructureError, mirroring Python's TypeError on mixed operands. */
+function compareVals(op: string, a: unknown, b: unknown): boolean {
+  const an = toNum(a), bn = toNum(b);
+  if (an !== null && bn !== null) {
+    switch (op) {
+      case "lt": return an < bn;
+      case "le": return an <= bn;
+      case "gt": return an > bn;
+      default: return an >= bn;
+    }
+  }
+  if (typeof a === "string" && typeof b === "string") {
+    const c = a < b ? -1 : a > b ? 1 : 0;
+    switch (op) {
+      case "lt": return c < 0;
+      case "le": return c <= 0;
+      case "gt": return c > 0;
+      default: return c >= 0;
+    }
+  }
+  throw new StructureError("comparison requires numbers or two strings");
 }
 
 /** Deserialize a PExpr from its map form (SPEC 9.2 depth limit). */
@@ -173,6 +255,14 @@ export function portableFlowFromDict(data: unknown): PortableFlow {
     throw new StructureError("portable IR must be an object");
   }
   const d = data as Record<string, unknown>;
+  const sv = d.spec_version;
+  if (typeof sv === "string" && sv !== "" && sv !== SPEC_VERSION_TS) {
+    throw new StructureError(`portable IR spec_version ${sv} does not match current ${SPEC_VERSION_TS} (SPEC 9.5)`);
+  }
+  const pv = d.portability;
+  if (typeof pv === "string" && pv !== "" && pv !== "PORTABLE") {
+    throw new StructureError("portable IR portability must be PORTABLE");
+  }
   const rawRules = (d.rules ?? []) as unknown[];
   if (!Array.isArray(rawRules)) throw new StructureError("rules must be an array");
   if (rawRules.length > MAX_RULES) {

@@ -102,14 +102,9 @@ public final class Portable {
             case "eq" -> valueEquals(evalExpr(e.args.get(0), input), evalExpr(e.args.get(1), input));
             case "ne" -> !valueEquals(evalExpr(e.args.get(0), input), evalExpr(e.args.get(1), input));
             case "lt", "le", "gt", "ge" -> {
-                double a = Json.num(evalExpr(e.args.get(0), input));
-                double b = Json.num(evalExpr(e.args.get(1), input));
-                yield switch (e.op) {
-                    case "lt" -> a < b;
-                    case "le" -> a <= b;
-                    case "gt" -> a > b;
-                    default -> a >= b;
-                };
+                Object a = evalExpr(e.args.get(0), input);
+                Object b = evalExpr(e.args.get(1), input);
+                yield compareVals(e.op, a, b);
             }
             case "and" -> {
                 for (PExpr a : e.args) if (!truthy(evalExpr(a, input))) { yield false; }
@@ -134,11 +129,58 @@ public final class Portable {
         };
     }
 
-    private static boolean truthy(Object v) { return Boolean.TRUE.equals(v); }
+    /// Python-style truthiness: false, null, numeric zero, empty string,
+    /// and empty collections are falsy; every other value is truthy.
+    public static boolean truthy(Object v) {
+        if (v == null) return false;
+        if (v instanceof Boolean b) return b;
+        if (v instanceof String s) return !s.isEmpty();
+        if (v instanceof Number n) return n.doubleValue() != 0;
+        if (v instanceof java.util.Collection<?> c) return !c.isEmpty();
+        if (v instanceof java.util.Map<?, ?> m) return !m.isEmpty();
+        return true;
+    }
 
-    /** Numeric-aware equality: Integer 1 equals Double 1.0 across IR round-trips. */
+    private static Double toNum(Object v) {
+        if (v instanceof Number n) return n.doubleValue();
+        if (v instanceof Boolean b) return b ? 1.0 : 0.0;
+        return null;
+    }
+
+    /// Python-style ordering: two numbers (booleans count as 0/1) compare
+    /// numerically; two strings compare lexicographically; anything else is
+    /// a StructureError, mirroring Python's TypeError on mixed operands.
+    private static boolean compareVals(String op, Object a, Object b) {
+        if (a instanceof String sa && b instanceof String sb) {
+            int c = sa.compareTo(sb);
+            return switch (op) {
+                case "lt" -> c < 0; case "le" -> c <= 0;
+                case "gt" -> c > 0; default -> c >= 0;
+            };
+        }
+        Double da = toNum(a), db = toNum(b);
+        if (da == null || db == null) {
+            throw new FlowErrors.StructureError("comparison requires numbers or two strings");
+        }
+        return switch (op) {
+            case "lt" -> da < db; case "le" -> da <= db;
+            case "gt" -> da > db; default -> da >= db;
+        };
+    }
+
+    /** Numeric-aware equality: Integer 1 equals Double 1.0 across IR
+     *  round-trips; booleans equal 0/1 like Python (true == 1, true != false). */
     private static boolean valueEquals(Object a, Object b) {
         if (Objects.equals(a, b)) return true;
+        if (a instanceof Boolean ab) {
+            if (b instanceof Boolean bb) return ab == bb;
+            Double db = toNum(b);
+            return db != null && (ab ? 1.0 : 0.0) == db;
+        }
+        if (b instanceof Boolean bb2) {
+            Double da = toNum(a);
+            return da != null && da == (bb2 ? 1.0 : 0.0);
+        }
         if (a instanceof Number && b instanceof Number) {
             return Double.compare(((Number) a).doubleValue(), ((Number) b).doubleValue()) == 0;
         }
@@ -206,6 +248,12 @@ public final class Portable {
     public static PortableFlow portableFlowFromDict(Object data) {
         if (!(data instanceof Map)) throw new FlowErrors.StructureError("portable IR must be an object");
         Map<String, Object> d = (Map<String, Object>) data;
+        Object sv = d.get("spec_version");
+        if (sv instanceof String s && !s.isEmpty() && !s.equals(Trust.SPEC_VERSION))
+            throw new FlowErrors.StructureError("portable IR spec_version " + s + " does not match current " + Trust.SPEC_VERSION + " (SPEC 9.5)");
+        Object pv = d.get("portability");
+        if (pv instanceof String p && !p.isEmpty() && !p.equals("PORTABLE"))
+            throw new FlowErrors.StructureError("portable IR portability must be PORTABLE");
         Object rawRules = d.get("rules");
         List<Object> ruleList = rawRules instanceof List<?> l ? (List<Object>) l : List.of();
         if (ruleList.size() > MAX_RULES) throw new FlowErrors.StructureError("rule count exceeds maximum");

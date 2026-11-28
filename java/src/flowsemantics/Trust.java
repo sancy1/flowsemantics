@@ -17,16 +17,30 @@ public final class Trust {
     public static String contractVersion(List<Flow.Rule> rules, Flow.Fallback fallback,
             Outcome.EvaluationMode mode, List<Flow.CatchRule> catches,
             int finalizerCount, Outcome.FinallyFailurePolicy policy,
-            long finallyTimeoutMs, boolean traceEnabled) {
+            long finallyTimeoutMs, boolean traceEnabled,
+            List<Portable.PortableRule> portableRules) {
         List<Map<String, Object>> ruleList = new ArrayList<>();
-        for (Flow.Rule r : rules) {
+        for (int i = 0; i < rules.size(); i++) {
+            Flow.Rule r = rules.get(i);
+            Portable.PortableRule pr = i < portableRules.size() ? portableRules.get(i) : null;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", r.id); m.put("kind", r.kind); m.put("priority", r.priority);
             m.put("effective_from", r.effectiveFrom); m.put("effective_until", r.effectiveUntil);
+            m.put("native", pr == null);
+            m.put("condition", pr != null && pr.condition != null ? Portable.exprToDict(pr.condition) : null);
+            m.put("guard", pr != null && pr.guard != null ? Portable.exprToDict(pr.guard) : null);
+            m.put("transform", pr != null && pr.transform != null ? Portable.exprToDict(pr.transform) : null);
+            List<Map<String, Object>> effs = new ArrayList<>();
+            for (Outcome.Effect e : r.effects) {
+                Map<String, Object> em = new LinkedHashMap<>();
+                em.put("name", e.name); em.put("payload", e.payload);
+                effs.add(em);
+            }
+            m.put("effects", effs);
             ruleList.add(m);
         }
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("algorithm", "flowsemantics-contract-v1");
+        payload.put("algorithm", "flowsemantics-contract-v2");
         payload.put("rules", ruleList);
         payload.put("fallback", fallback == null ? null : fallback.kind);
         payload.put("mode", mode.name());
@@ -166,14 +180,24 @@ public final class Trust {
                 }
             }
         }
-        // overlap warning: identical portable conditions
+        // overlap warning: identical portable conditions. O(n) grouping
+        // by (kind, canonical condition JSON); pairwise compare only
+        // within each group (SPEC 12.8).
         if (c.hasPortable) {
+            Map<String, List<Integer>> groups = new LinkedHashMap<>();
             for (int i = 0; i < c.portableRules.size(); i++) {
-                for (int j = i + 1; j < c.portableRules.size(); j++) {
-                    Portable.PortableRule a = c.portableRules.get(i), b = c.portableRules.get(j);
-                    if (a.kind.equals(b.kind) && exprEqual(a.condition, b.condition)) {
+                Portable.PortableRule pr = c.portableRules.get(i);
+                String condJson = pr.condition != null
+                    ? CanonicalJson.write(Portable.exprToDict(pr.condition)) : "null";
+                String key = pr.kind + "\u0000" + condJson;
+                groups.computeIfAbsent(key, k -> new ArrayList<>()).add(i);
+            }
+            for (List<Integer> idxs : groups.values()) {
+                for (int a = 0; a < idxs.size(); a++) {
+                    for (int b = a + 1; b < idxs.size(); b++) {
                         issues.add(new ValidationIssue("warning", "overlapping_rules",
-                            "rules have structurally identical conditions", b.ruleId));
+                            "rules have structurally identical conditions",
+                            c.portableRules.get(idxs.get(b)).ruleId));
                     }
                 }
             }
@@ -272,8 +296,23 @@ public final class Trust {
         payload.put("clock_wall", rec.clockWall);
         payload.put("clock_monotonic", rec.clockMonotonic);
         payload.put("outcome", outcome);
-        payload.put("effects", rec.effects);
+        List<Map<String, Object>> effs = new ArrayList<>();
+        for (Outcome.Effect e : rec.effects) {
+            Map<String, Object> em = new LinkedHashMap<>();
+            em.put("name", e.name); em.put("payload", e.payload);
+            effs.add(em);
+        }
+        payload.put("effects", effs);
         return payload;
+    }
+
+    static byte[] hexToBytes(String hex) {
+        if (hex == null || hex.length() % 2 != 0) throw new IllegalArgumentException("bad hex");
+        byte[] out = new byte[hex.length() / 2];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = (byte) Integer.parseInt(hex.substring(2 * i, 2 * i + 2), 16);
+        }
+        return out;
     }
 
     static String hmacSha256Hex(byte[] key, String data) {
@@ -317,7 +356,17 @@ public final class Trust {
         if (rec.integrity == null) return;
         if (key == null) throw new ReplayError("record carries an integrity tag; an integrity_key is required");
         String expected = hmacSha256Hex(key, CanonicalJson.write(canonicalPayload(rec)));
-        if (!expected.equals(rec.integrity)) throw new ReplayError("replay record integrity check failed");
+        byte[] expectedBytes;
+        byte[] actualBytes;
+        try {
+            expectedBytes = hexToBytes(expected);
+            actualBytes = hexToBytes(rec.integrity);
+        } catch (IllegalArgumentException e) {
+            throw new ReplayError("replay record integrity check failed");
+        }
+        if (!MessageDigest.isEqual(expectedBytes, actualBytes)) {
+            throw new ReplayError("replay record integrity check failed");
+        }
     }
 
     static void checkVersions(ReplayRecord rec, Flow.FlowContract c) {

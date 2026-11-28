@@ -17,16 +17,30 @@ public static class Trust
         IReadOnlyList<Flow.Rule> rules, Flow.Fallback? fallback,
         EvaluationMode mode, IReadOnlyList<Flow.CatchRule> catches,
         int finalizerCount, FinallyFailurePolicy policy,
-        long finallyTimeoutMs, bool traceEnabled)
+        long finallyTimeoutMs, bool traceEnabled,
+        IReadOnlyList<Portable.PortableRule>? portableRules = null)
     {
-        var ruleList = rules.Select(r => (object)new Dictionary<string, object?>
+        var prs = portableRules ?? Array.Empty<Portable.PortableRule>();
+        var ruleList = rules.Select((r, i) =>
         {
-            ["id"] = r.Id, ["kind"] = r.Kind, ["priority"] = r.Priority,
-            ["effective_from"] = r.EffectiveFrom, ["effective_until"] = r.EffectiveUntil,
+            var pr = i < prs.Count ? prs[i] : null;
+            return (object)new Dictionary<string, object?>
+            {
+                ["id"] = r.Id, ["kind"] = r.Kind, ["priority"] = r.Priority,
+                ["effective_from"] = r.EffectiveFrom, ["effective_until"] = r.EffectiveUntil,
+                ["native"] = pr is null,
+                ["condition"] = pr?.Condition is not null ? Portable.ExprToNode(pr.Condition) : null,
+                ["guard"] = pr?.Guard is not null ? Portable.ExprToNode(pr.Guard) : null,
+                ["transform"] = pr?.Transform is not null ? Portable.ExprToNode(pr.Transform) : null,
+                ["effects"] = r.Effects.Select(e => (object)new Dictionary<string, object?>
+                {
+                    ["name"] = e.Name, ["payload"] = e.Payload,
+                }).ToList(),
+            };
         }).ToList();
         var payload = new Dictionary<string, object?>
         {
-            ["algorithm"] = "flowsemantics-contract-v1",
+            ["algorithm"] = "flowsemantics-contract-v2",
             ["rules"] = ruleList,
             ["fallback"] = fallback?.Kind,
             ["mode"] = mode.ToString(),
@@ -204,16 +218,27 @@ public static class Trust
                     unconditional = true;
             }
         }
-        // overlap warning: identical portable conditions
+        // overlap warning: identical portable conditions. O(n) grouping
+        // by (kind, canonical condition JSON); pairwise compare only
+        // within each group (SPEC 12.8).
         if (c.HasPortable)
+        {
+            var groups = new Dictionary<string, List<int>>();
             for (var i = 0; i < c.PortableRules.Count; i++)
-                for (var j = i + 1; j < c.PortableRules.Count; j++)
-                {
-                    var a = c.PortableRules[i]; var b = c.PortableRules[j];
-                    if (a.Kind == b.Kind && ExprEqual(a.Condition, b.Condition))
+            {
+                var pr = c.PortableRules[i];
+                var condJson = pr.Condition is not null
+                    ? CanonicalJson.Write(Portable.ExprToNode(pr.Condition)) : "null";
+                var key = pr.Kind + "\u0000" + condJson;
+                if (!groups.TryGetValue(key, out var list)) { list = new List<int>(); groups[key] = list; }
+                list.Add(i);
+            }
+            foreach (var idxs in groups.Values)
+                for (var a = 0; a < idxs.Count; a++)
+                    for (var b = a + 1; b < idxs.Count; b++)
                         issues.Add(new ValidationIssue("warning", "overlapping_rules",
-                            "rules have structurally identical conditions", b.RuleId));
-                }
+                            "rules have structurally identical conditions", c.PortableRules[idxs[b]].RuleId));
+        }
         // gap warning
         if (c.Fallback is null && c.Rules.Count > 0)
             issues.Add(new ValidationIssue("warning", "possible_gap",
@@ -356,7 +381,11 @@ public static class Trust
         if (rec.Integrity is null) return;
         if (key is null) throw new ReplayError("record carries an integrity tag; an integrity_key is required");
         var expected = HmacSha256Hex(key, CanonicalJson.Write(CanonicalPayload(rec)));
-        if (!expected.Equals(rec.Integrity, StringComparison.OrdinalIgnoreCase))
+        var expectedBytes = Convert.FromHexString(expected);
+        byte[]? actualBytes = null;
+        try { actualBytes = Convert.FromHexString(rec.Integrity); } catch (FormatException) { }
+        if (actualBytes is null || actualBytes.Length != expectedBytes.Length ||
+            !CryptographicOperations.FixedTimeEquals(actualBytes, expectedBytes))
             throw new ReplayError("replay record integrity check failed");
     }
 
